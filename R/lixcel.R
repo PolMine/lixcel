@@ -40,7 +40,7 @@ summary.limetab <- function(object, ...){
 #' litab <- read_limetab(file = fname)
 #' xlsx_sour <- tempfile(fileext = ".xlsx")
 #' 
-#' mix_workbook_n_lime(
+#' lixcel(
 #'   excelfile = excelfile,
 #'   sheet = "Grundgesagmtheit",
 #'   lime = litab,
@@ -51,7 +51,7 @@ summary.limetab <- function(object, ...){
 #' litab <- read_limetab(file = fname)
 #' xlsx_update <- tempfile(fileext = ".xlsx")
 #' 
-#' mix_workbook_n_lime(
+#' lixcel(
 #'   excelfile = xlsx_sour,
 #'   sheet = "Grundgesagmtheit",
 #'   lime = litab,
@@ -61,6 +61,7 @@ summary.limetab <- function(object, ...){
 #' @rdname lime
 #' @importFrom openxlsx loadWorkbook read.xlsx writeDataTable saveWorkbook
 #'   writeData getStyles createStyle addStyle
+#' @importFrom stats setNames
 #' @param excelfile An Excel file.
 #' @param sheet Name of the sheet to augment.
 #' @param lime A `limetab` object to feed in.
