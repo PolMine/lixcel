@@ -1,0 +1,9 @@
+<<salutation>>,
+
+thank you so much for taking part in our small survey.
+Learn more about this project <a href="http://polmine.de">here</a>.
+
+Please use this token: <b><<token>></b>
+
+Kind regards
+R Mailing Engine
