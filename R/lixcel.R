@@ -60,7 +60,7 @@ summary.limetab <- function(object, ...){
 #' @export
 #' @rdname lime
 #' @importFrom openxlsx loadWorkbook read.xlsx writeDataTable saveWorkbook
-#'   writeData getStyles createStyle addStyle
+#'   writeData getStyles createStyle addStyle freezePane protectWorksheet
 #' @importFrom stats setNames
 #' @param excelfile An Excel file.
 #' @param sheet Name of the sheet to augment.
@@ -126,6 +126,28 @@ lixcel <- function(excelfile, sheet, lime, destfile){
       headerStyle = headerStyle
     )
     
+    protectWorksheet(
+      wb = wb, sheet = sheet,
+      protect = TRUE, password = "limesurvey",
+      lockFormattingCells = FALSE, lockFormattingColumns = FALSE,
+      lockInsertingColumns = TRUE, lockDeletingColumns = TRUE
+    )
+
+    for (col in 1L:ncol(df)){
+      addStyle(
+        wb = wb, sheet = sheet,
+        style = createStyle(locked = FALSE),
+        cols = col,
+        rows = 2L:nrow(df),
+        stack = TRUE
+      )
+    }
+
+    freezePane(
+      wb = wb,
+      sheet = sheet,
+      firstActiveRow = 2L
+    )
   }
 
   saveWorkbook(wb = wb, file = destfile, overwrite = FALSE)

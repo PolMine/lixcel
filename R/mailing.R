@@ -1,4 +1,22 @@
 #' Mailing Engine Class
+#' 
+#' The approach of the `$write_mails()` method is to send out mails via a SMTP
+#' mailserver. A blind (bcc) copy is sent to the sender to have a check on
+#' outgoing mails. The `$check_and_move()` method evaluates messages in the IMAP
+#' account provided, augmenting the Excel document with information on outgoing
+#' mail and moving messages to the "Sent" folder.
+#' 
+#' A viable alternative to sending mails via SMTP would be to draft mails
+#' automatically. Draft mails (in the Drafts folder) would/could be sent out
+#' automatically. As promising as respective functionality of the [Microsoft365R
+#' package](https://CRAN.R-project.org/package=Microsoft365R) sounds, API
+#' restrictions of organizations may inhibit this approach.
+#' [RDCOMClient](https://github.com/omegahat/RDCOMClient) sounds like a
+#' promising alternative (see
+#' [stackoverflow](https://stackoverflow.com/questions/57811999/rdcomclient-create-write-mail-to-drafts-folder-of-specific-account)),
+#' but this is a Windows only package.
+#' 
+#' @importFrom pbapply pblapply
 #' @importFrom R6 R6Class
 #' @importFrom openxlsx loadWorkbook read.xlsx getSheetNames
 #' @importFrom Microsoft365R get_business_outlook
@@ -140,7 +158,7 @@ Mailing <- R6Class(
     #'   by double angle brackets are assumed to be items for personalization.
     #'   Fields defined by the personalize vector are substituted by the
     #'   respective column of the parsed excel sheet.
-    write_mails = function(subject, personalize = c("salutation", "token")){
+    write_mails = function(subject, personalize = c("salutation", "token"), dryrun = TRUE, chunksize = 10L, wait = 65){
       
       mail_passwd <- rstudioapi::askForPassword("Please enter password for Email")
       smtp_data <- list(
@@ -148,26 +166,62 @@ Mailing <- R6Class(
         user.name = self$smtp_user, passwd = mail_passwd
       )
       
-      for (id in self$data[["tid"]]){
+      row_ids <- 1:nrow(self$data)
+      f <- unlist(
+        lapply(unique(ceiling(row_ids / chunksize)), rep, times = chunksize)
+      )[row_ids]
+      chunks <- split(self$data[["tid"]], f = f)
+      
+      for (i in 1:length(chunks)){
+        message("PROCEEDING TO CHUNK ", i)
+        chunk <- chunks[[i]]
         
-        case <- subset(self$data, tid == id)
-        if (nrow(case) != 1L)
-          stop(sprintf("exactly one case required - not true for %d", id))
-        
-        mail <- self$template
-        for (replace in personalize)
-          mail <- gsub(sprintf("<<%s>>", replace), case[[replace]], mail)
-        body <- paste(mail, collapse = "</br>")
-        
-        send.mail(
-          from = self$from, to = case[[self$mailcol]], bcc = self$bcc,
-          subject = subject, body = body, encoding = "utf-8",
-          attach.files = self$attachment,
-          smtp = smtp_data, authenticate = TRUE,
-          html = TRUE
-        )
+        for (id in chunk){
+          
+          case <- subset(self$data, tid == id)
+          if (nrow(case) != 1L)
+            stop(sprintf("exactly one case required - not true for %d", id))
+          
+          mail <- self$template
+          for (replace in personalize)
+            mail <- gsub(sprintf("<<%s>>", replace), case[[replace]], mail)
+          body <- paste(mail, collapse = "")
+          
+          recipient <- strsplit(case[[self$mailcol]], split = "\\s")[[1]]
+          recipient <- recipient[nchar(recipient) > 0L]
+          recipient <- gsub("^(\\s*|;|,)(.*?)(\\s*|;|,)$", "\\2", recipient)
+          if (dryrun == TRUE){
+            body <- paste(paste(recipient, collapse = "<br/>"), body, sep = "<br/>")
+            recipient <- self$bcc
+          }
+
+          if (!is.null(recipient)){
+            message(
+              sprintf(
+                "[%s] sending mail (tid %d): %s",
+                format(Sys.time()), id, paste(recipient, collapse = " / ")
+              )
+            )
+            worked <- try({
+              send.mail(
+                from = self$from, to = recipient, bcc = self$bcc,
+                subject = subject, body = body, encoding = "utf-8",
+                attach.files = self$attachment,
+                smtp = smtp_data, authenticate = TRUE,
+                html = TRUE
+              )
+            })
+            if (is(worked) == "try-error"){
+              message("FAIL: ", paste(recipient, collapse = " / "))
+            }
+          }
+          Sys.sleep(0.5 + runif(1))
+        }
+        message(sprintf("... taking a %d second break ...", wait))
+        Sys.sleep(time = wait)
       }
       
+      message("*** MAILING FINISHED ***")
       invisible(self)
     },
     
@@ -177,7 +231,8 @@ Mailing <- R6Class(
     #'   of the email.
     #' @param from Folder with mails to be moved.
     #' @param to Folder where to put the mails.
-    check_and_move = function(sender, from = "INBOX", to = "Sent"){
+    #' @importFrom lubridate dmy
+    check_and_move = function(sender, from = "INBOX", to = "Sent", move = FALSE){
       
       mail_passwd <- rstudioapi::askForPassword("Please enter password for Email")
       
@@ -188,42 +243,60 @@ Mailing <- R6Class(
       )
       con$select_folder(name = from)
       
-      mailout <- rep("", times = nrow(tmp_data))
+      mailout_col <- sprintf("%s_mailout", self$mailing_id)
+      if (mailout_col %in% colnames(tmp_data)){
+        stop(sprintf("column %s already exists", mailout_col))
+      } else {
+        mailout_col_index <- ncol(tmp_data) + 1L
+      }
+      
       writeData(
         wb = self$wb, sheet = self$sheet,
-        x = c(
-          sprintf("%s_mailout", self$mailing_id),
-          mailout
-        ),
-        startCol = ncol(tmp_data) + 1L,
+        x = c(mailout_col, rep("", times = nrow(tmp_data))),
+        startCol = mailout_col_index,
         startRow = 1L,
         borderStyle = "none",
         headerStyle = self$header_style
       )
       
       matches <- con$search_string(expr = sender, where = "FROM")
-      for (i in matches){
-        header <- strsplit(
-          con$fetch_header(i)[[sprintf("header%d", i)]],
-          "\\r\\n"
-        )[[1]]
-        email <- gsub(
-          "^To:\\s*.*?\\s*<(.*?)>$", "\\1",
-          header[grep("^To:\\s", header)]
-        )
-        print(email)
-        row_index <- grep(email, tmp_data[[self$mailcol]])
-        if (length(row_index) != 1){
-          warning(sprintf("cannot look up email: %s", email))
-        } else {
-          writeData(
-            wb = self$wb, sheet = self$sheet, x = format(Sys.time()),
-            startCol = ncol(tmp_data) + 1L, startRow = row_index + 1L,
-            borderStyle = "none"
+      pblapply(
+        matches,
+        function(i){
+          header <- strsplit(
+            con$fetch_header(i)[[sprintf("header%d", i)]],
+            "\\r\\n"
+          )[[1]]
+          email_raw <- gsub(
+            "^To:\\s*(.*?)$", "\\1",
+            header[grep("^To:\\s", header)]
           )
+          email <- gsub("^<(.*?)>$", "\\1", strsplit(email_raw, ",\\s*")[[1]])
+          
+          date_raw <- gsub("^Date:\\s(.*?)$", "\\1", grep("^Date:\\s", header, value = TRUE))
+          date <- lubridate::dmy(
+            gsub("^(.*?).*?\\s\\d+:\\d{2}:\\d{2}\\s\\+\\d+$", "\\1", date_raw)
+          )
+          time <- gsub("^.*?.*?\\s(\\d+:\\d{2}:\\d{2})\\s\\+\\d+$", "\\1", date_raw)
+          
+          row_indices <- unique(unlist(sapply(
+            email, function(m) grep(m, tmp_data[[self$mailcol]])
+          )))
+          if (length(row_indices) > 1){
+            warning(sprintf("Multiple rows with Email: %s", email))
+          }
+          for (row_index in row_indices){
+            writeData(
+              wb = self$wb, sheet = self$sheet,
+              x = paste(as.character(date), time, sep = " "),
+              startCol = mailout_col_index,
+              startRow = row_index + 1L,
+              borderStyle = "none"
+            )
+          }
         }
-      }
-      con$move_msg(matches, to_folder = to)
+      )
+      if (move) con$move_msg(matches, to_folder = to)
 
       invisible(self)
     },
@@ -231,7 +304,7 @@ Mailing <- R6Class(
     #' @details Check for mail delivery failure, create respective column and move
     #'   mails to trash.
     #' @param trash Trash folder of the Mail account.
-    mail_delivery_failure = function(trash = "Gel&APY-schte Elemente"){
+    mail_delivery_failure = function(trash = "Gel&APY-schte Elemente", move = FALSE){
       
       mail_passwd <- rstudioapi::askForPassword("Please enter password for Email")
       
@@ -252,29 +325,46 @@ Mailing <- R6Class(
         rep("", times = nrow(tmp_data))
       )
 
-      if (length(failed) > 0L){
+      if (length(failed_mails_index) > 0L){
         
-        failed_mails <- sapply(
+        failed_mails <- unlist(lapply(
           failed_mails_index,
           function(i){
             body <- strsplit(con$fetch_body(i)[[sprintf("body%d", i)]], "\\r\\n")[[1]]
-            recipient_line <- grep("To: &lt;.*?&gt;", body, value = TRUE)
-            gsub("To:\\s&lt;(.*?)&gt;", "\\1", recipient_line)
+            email <- unique(gsub('^.*?"mailto:(.*?)".*?$', "\\1", grep("mailto:", body, value = TRUE)))
+            if (length(email) == 0L){
+              recipient_line <- grep("To: (&lt;|<).*?(&gt;|)", body, value = TRUE)
+              email <- gsub("To:\\s(&lt;|<)(.*?)(&gt;|>)", "\\2", recipient_line)
+              gr <- grep("grossstadtbefragung", email)
+              if (length(gr) > 0) email <- email[-gr][1]
+            }
+            if (length(email) > 1) warning("Cannot extract mail: ", email)
+            if (!grepl("@", email[1])) warning("Does not look like Email: ", email[1])
+            email[1]
           }
-        )
+        ))
 
         row_indices <- sapply(
           failed_mails,
           function(m){
             row_index <- grep(m, tmp_data[[self$mailcol]])
-            if (length(row_index) != 1L) stop(sprintf("Cannot look up %s", m))
+            if (length(row_index) != 1L){
+              warning(sprintf("Cannot look up %s", m))
+              return(NA)
+            }
             row_index
           }
         )
-
-        failed[row_indices + 1L] <- "FAIL"
         
-        con$move_msg(failed_mails_index, to_folder = trash)
+        if (any(is.na(row_indices))){
+          identified <- !is.na(row_indices)
+          failed_mails <- failed_mails[identified]
+          row_indices <- row_indices[identified]
+        }
+
+        failed[row_indices + 1L] <- failed_mails
+        
+        if (move) con$move_msg(failed_mails_index[identified], to_folder = trash)
       }
       
       writeData(

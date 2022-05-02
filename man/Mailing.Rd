@@ -4,9 +4,29 @@
 \alias{Mailing}
 \title{Mailing Engine Class}
 \description{
-Mailing Engine Class
+The approach of the \verb{$write_mails()} method is to send out mails via a SMTP
+mailserver. A blind (bcc) copy is sent to the sender to have a check on
+outgoing mails. The \verb{$check_and_move()} method evaluates messages in the IMAP
+account provided, augmenting the Excel document with information on outgoing
+mail and moving messages to the "Sent" folder.
+}
+\details{
+A viable alternative to sending mails via SMTP would be to draft mails
+automatically. Draft mails (in the Drafts folder) would/could be sent out
+automatically. As promising as respective functionality of the \href{https://CRAN.R-project.org/package=Microsoft365R}{Microsoft365R package} sounds, API
+restrictions of organizations may inhibit this approach.
+\href{https://github.com/omegahat/RDCOMClient}{RDCOMClient} sounds like a
+promising alternative (see
+\href{https://stackoverflow.com/questions/57811999/rdcomclient-create-write-mail-to-drafts-folder-of-specific-account}{stackoverflow}),
+but this is a Windows only package.
 
-Mailing Engine Class
+Write mails.
+
+Move Mails sent from a specified mail address to a designated
+folder
+
+Check for mail delivery failure, create respective column and move
+mails to trash.
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
@@ -124,7 +144,13 @@ be attached.}
 \if{latex}{\out{\hypertarget{method-write_mails}{}}}
 \subsection{Method \code{write_mails()}}{
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Mailing$write_mails(subject, personalize = c("salutation", "token"))}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Mailing$write_mails(
+  subject,
+  personalize = c("salutation", "token"),
+  dryrun = TRUE,
+  chunksize = 10L,
+  wait = 65
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -139,17 +165,13 @@ respective column of the parsed excel sheet.}
 }
 \if{html}{\out{</div>}}
 }
-\subsection{Details}{
-Write mails.
-}
-
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-check_and_move"></a>}}
 \if{latex}{\out{\hypertarget{method-check_and_move}{}}}
 \subsection{Method \code{check_and_move()}}{
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Mailing$check_and_move(sender, from = "INBOX", to = "Sent")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Mailing$check_and_move(sender, from = "INBOX", to = "Sent", move = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -164,18 +186,13 @@ of the email.}
 }
 \if{html}{\out{</div>}}
 }
-\subsection{Details}{
-Move Mails sent from a specified mail address to a designated
-folder
-}
-
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-mail_delivery_failure"></a>}}
 \if{latex}{\out{\hypertarget{method-mail_delivery_failure}{}}}
 \subsection{Method \code{mail_delivery_failure()}}{
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Mailing$mail_delivery_failure(trash = "Gel&APY-schte Elemente")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Mailing$mail_delivery_failure(trash = "Gel&APY-schte Elemente", move = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -185,11 +202,6 @@ folder
 }
 \if{html}{\out{</div>}}
 }
-\subsection{Details}{
-Check for mail delivery failure, create respective column and move
-mails to trash.
-}
-
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-clone"></a>}}
