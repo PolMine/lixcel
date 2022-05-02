@@ -189,7 +189,10 @@ Mailing <- R6Class(
           
           recipient <- strsplit(case[[self$mailcol]], split = "\\s")[[1]]
           recipient <- recipient[nchar(recipient) > 0L]
-          recipient <- gsub("^(\\s*|;|,)(.*?)(\\s*|;|,)$", "\\2", recipient)
+          recipient <- gsub("^\\s*(|;|,)(.*?)(|;|,|.)\\s*$", "\\2", recipient)
+          
+          # Remove all non-ASCII characters (including zero-width space \u200B)
+          recipient <- iconv(recipient, Encoding(recipient), "ASCII", sub = "")
           if (dryrun == TRUE){
             body <- paste(paste(recipient, collapse = "<br/>"), body, sep = "<br/>")
             recipient <- self$bcc
@@ -245,19 +248,19 @@ Mailing <- R6Class(
       
       mailout_col <- sprintf("%s_mailout", self$mailing_id)
       if (mailout_col %in% colnames(tmp_data)){
-        stop(sprintf("column %s already exists", mailout_col))
+        mailout_col_index <- which(colnames(tmp_data) == mailout_col)
       } else {
         mailout_col_index <- ncol(tmp_data) + 1L
+        writeData(
+          wb = self$wb, sheet = self$sheet,
+          x = c(mailout_col, rep("", times = nrow(tmp_data))),
+          startCol = mailout_col_index,
+          startRow = 1L,
+          borderStyle = "none",
+          headerStyle = self$header_style
+        )
       }
       
-      writeData(
-        wb = self$wb, sheet = self$sheet,
-        x = c(mailout_col, rep("", times = nrow(tmp_data))),
-        startCol = mailout_col_index,
-        startRow = 1L,
-        borderStyle = "none",
-        headerStyle = self$header_style
-      )
       
       matches <- con$search_string(expr = sender, where = "FROM")
       pblapply(
@@ -286,9 +289,15 @@ Mailing <- R6Class(
             warning(sprintf("Multiple rows with Email: %s", email))
           }
           for (row_index in row_indices){
+            tmp_data <- read.xlsx(self$wb, sheet = self$sheet)
+            new_cell_content <- paste(as.character(date), time, sep = " ")
+            old_cell_content <- tmp_data[[mailout_col_index]][[row_index]]
+            if (nchar(old_cell_content) > 0L){
+              new_cell_content <- paste(old_cell_content, new_cell_content, sep = " // ")
+            }
             writeData(
               wb = self$wb, sheet = self$sheet,
-              x = paste(as.character(date), time, sep = " "),
+              x = new_cell_content,
               startCol = mailout_col_index,
               startRow = row_index + 1L,
               borderStyle = "none"
@@ -320,10 +329,14 @@ Mailing <- R6Class(
       )
       
       tmp_data <- read.xlsx(self$wb, sheet = self$sheet)
-      failed <- c(
-        paste(self$mailing_id, "delivery_status", sep = "_"),
-        rep("", times = nrow(tmp_data))
-      )
+      failed_col <- paste(self$mailing_id, "delivery_status", sep = "_")
+      if (failed_col %in% colnames(tmp_data)){
+        failed_col_no <- which(colnames(tmp_data) == failed_col)
+        failed <- c(failed_col, tmp_data[[failed_col]])
+      } else {
+        failed <- c(failed_col, rep("", times = nrow(tmp_data)))
+        failed_col_no <- ncol(tmp_data) + 1L
+      }
 
       if (length(failed_mails_index) > 0L){
         
@@ -361,22 +374,33 @@ Mailing <- R6Class(
           failed_mails <- failed_mails[identified]
           row_indices <- row_indices[identified]
         }
-
-        failed[row_indices + 1L] <- failed_mails
         
+        for (i in 1L:length(row_indices)){
+          if (failed[row_indices[i] + 1L] == ""){
+            failed[row_indices[i] + 1L] <- failed_mails[i]
+          } else {
+            failed[row_indices[i] + 1L] <- paste(
+              unique(
+                c(failed_mails[i], strsplit(failed[row_indices[i] + 1L], " // ")[[1]])
+              ),
+              collapse = " // "
+            )
+          }
+        }
+
         if (move) con$move_msg(failed_mails_index[identified], to_folder = trash)
       }
       
       writeData(
         wb = self$wb, sheet = self$sheet,
         x = failed,
-        startCol = ncol(tmp_data) + 1L,
+        startCol = failed_col_no,
         startRow = 1L,
         borderStyle = "none",
         headerStyle = self$header_style
       )
 
-      invisible(self)
+      failed_mails
     }
   )
 )
