@@ -189,10 +189,19 @@ Mailing <- R6Class(
           
           recipient <- strsplit(case[[self$mailcol]], split = "\\s")[[1]]
           recipient <- recipient[nchar(recipient) > 0L]
-          recipient <- gsub("^\\s*(|;|,)(.*?)(|;|,|.)\\s*$", "\\2", recipient)
+          recipient <- gsub("^\\s*(|;|,)(.*?)(|;|,|\\.)\\s*$", "\\2", recipient)
           
           # Remove all non-ASCII characters (including zero-width space \u200B)
-          recipient <- iconv(recipient, Encoding(recipient), "ASCII", sub = "")
+          recipient <- unlist(lapply(
+            recipient,
+            function(r)
+              if (Encoding(r) != "unknown"){
+                iconv(r, Encoding(r), "ASCII", sub = "")
+              } else {
+                r
+              }
+          ))
+
           if (dryrun == TRUE){
             body <- paste(paste(recipient, collapse = "<br/>"), body, sep = "<br/>")
             recipient <- self$bcc
@@ -292,6 +301,7 @@ Mailing <- R6Class(
             tmp_data <- read.xlsx(self$wb, sheet = self$sheet)
             new_cell_content <- paste(as.character(date), time, sep = " ")
             old_cell_content <- tmp_data[[mailout_col_index]][[row_index]]
+            if (is.na(old_cell_content)) old_cell_content <- ""
             if (nchar(old_cell_content) > 0L){
               new_cell_content <- paste(old_cell_content, new_cell_content, sep = " // ")
             }
@@ -376,7 +386,7 @@ Mailing <- R6Class(
         }
         
         for (i in 1L:length(row_indices)){
-          if (failed[row_indices[i] + 1L] == ""){
+          if (failed[row_indices[i] + 1L] == "" || is.na(failed[row_indices[i] + 1L])){
             failed[row_indices[i] + 1L] <- failed_mails[i]
           } else {
             failed[row_indices[i] + 1L] <- paste(

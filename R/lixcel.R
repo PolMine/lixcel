@@ -66,7 +66,12 @@ summary.limetab <- function(object, ...){
 #' @param sheet Name of the sheet to augment.
 #' @param lime A `limetab` object to feed in.
 #' @param destfile Output Excel file.
-lixcel <- function(excelfile, sheet, lime, destfile){
+#' @param wave Specification of wave, will be appended to the column names (tid,
+#'   token, completed, usesleft).
+lixcel <- function(excelfile, sheet, lime, wave = "", destfile){
+  
+  cols <- paste(c("tid", "token", "completed", "usesleft" ), wave, sep = "")
+  names(cols) <- ls_cols
   
   wb <- loadWorkbook(file = excelfile)
   
@@ -76,14 +81,14 @@ lixcel <- function(excelfile, sheet, lime, destfile){
   if (nrow(lime) < nrow(df))
     stop("lime survey data has less rows than excel sheet")
   
-  if (all(ls_cols %in% colnames(df))){
+  if (all(cols %in% colnames(df))){
     
-    if (!all(df[["tid"]] %in% lime[["tid"]]))
+    if (!all(df[[cols["tid"]]] %in% lime[[ cols["tid"] ]]))
       stop("something's wrong: all IDs expected to be in workbook sheet - not true")
     
-    li_start <- which(colnames(df) == ls_cols[1L])
+    li_start <- which(colnames(df) == cols[1L])
     if (!all(
-      colnames(df)[li_start:(li_start + length(ls_cols) - 1L)] == colnames(lime)
+      colnames(df)[li_start:(li_start + length(cols) - 1L)] == cols
       )
     ){
       stop("order of column names not matching")
@@ -91,14 +96,14 @@ lixcel <- function(excelfile, sheet, lime, destfile){
     
     token_lime <- setNames(lime[["token"]], lime[["tid"]])
     
-    if (!all(df[["token"]] == token_lime[as.character(df[["tid"]])]))
+    if (!all(df[[ cols["token"] ]] == token_lime[as.character(df[[ cols["tid"] ]])]))
       stop("tokens do not match - stopping as things might have been mixed up!")
     
     for (x in c("completed", "usesleft")){
       writeData(
         wb = wb, sheet = sheet,
-        x = setNames(lime[[x]], lime[["token"]])[df[["token"]]],
-        startCol = which(colnames(df) == x),
+        x = setNames(lime[[x]], lime[["token"]])[df[[ cols["token"] ]]],
+        startCol = which(colnames(df) == cols[x]),
         startRow = 2L
       )
     }
