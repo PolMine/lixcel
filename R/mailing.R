@@ -50,6 +50,7 @@ Mailing <- R6Class(
     wb = NULL,
     sheet = NULL,
     data = NULL,
+    tidcol = NULL,
     mailcol = NULL,
     outlook = NULL,
     template = NULL,
@@ -89,7 +90,7 @@ Mailing <- R6Class(
     #' @param imap_url URL of the imap server.
     #' @param imap_user Username.
     #' @param header_style Default header style for new columns.
-    initialize = function(mailing_id, xlsx_file, sheet, mailcol, template, from, bcc, attachment = NULL, smtp_server, smtp_user, smtp_port, imap_url, imap_user){
+    initialize = function(mailing_id, xlsx_file, sheet, tidcol = "tid", mailcol, template, from, bcc, attachment = NULL, smtp_server, smtp_user, smtp_port, imap_url, imap_user){
       stopifnot(
         is.character(mailing_id),
         length(mailing_id) == 1L,
@@ -131,9 +132,10 @@ Mailing <- R6Class(
       self$wb <- loadWorkbook(xlsxFile = xlsx_file)
       self$sheet <- sheet
       self$data <- read.xlsx(self$wb, sheet = sheet)
-      if (!"tid" %in% colnames(self$data))
-        stop("presence of column 'tid' is mandatory yet missing")
-      
+
+      stopifnot(tidcol %in% colnames(self$data))
+      self$tidcol <- tidcol
+
       stopifnot(mailcol %in% colnames(self$data))
       self$mailcol <- mailcol
       
@@ -170,7 +172,7 @@ Mailing <- R6Class(
       f <- unlist(
         lapply(unique(ceiling(row_ids / chunksize)), rep, times = chunksize)
       )[row_ids]
-      chunks <- split(self$data[["tid"]], f = f)
+      chunks <- split(self$data[[self$tidcol]], f = f)
       
       for (i in 1:length(chunks)){
         message("PROCEEDING TO CHUNK ", i)
@@ -178,7 +180,7 @@ Mailing <- R6Class(
         
         for (id in chunk){
           
-          case <- subset(self$data, tid == id)
+          case <- self$data[self$data[[self$tidcol]] == id,]
           if (nrow(case) != 1L)
             stop(sprintf("exactly one case required - not true for %d", id))
           

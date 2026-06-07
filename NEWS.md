@@ -1,3 +1,7 @@
+# lixcel v0.0.6
+- `lixcel()` does not require argument `skip`, does not break if missing.
+
+
 # lixcel v0.0.5
 - `lixcel()` has new argument `wave`.
 

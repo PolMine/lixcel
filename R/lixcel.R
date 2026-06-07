@@ -68,7 +68,8 @@ summary.limetab <- function(object, ...){
 #' @param destfile Output Excel file.
 #' @param wave Specification of wave, will be appended to the column names (tid,
 #'   token, completed, usesleft).
-lixcel <- function(excelfile, sheet, lime, wave = "", destfile){
+#' @param skip A vector of token ids to omit when evaluating 
+lixcel <- function(excelfile, sheet, lime, wave = "", skip, destfile){
   
   cols <- paste(c("tid", "token", "completed", "usesleft" ), wave, sep = "")
   names(cols) <- ls_cols
@@ -77,13 +78,15 @@ lixcel <- function(excelfile, sheet, lime, wave = "", destfile){
   
   if (!sheet %in% names(wb)) stop("sheet not available")
   df <- read.xlsx(wb, sheet = sheet)
+  
+  df_min <- if (!missing(skip)) df[!df[[cols["tid"]]] %in% skip,] else df
 
   if (nrow(lime) < nrow(df))
     stop("lime survey data has less rows than excel sheet")
   
   if (all(cols %in% colnames(df))){
     
-    if (!all(df[[cols["tid"]]] %in% lime[[ cols["tid"] ]]))
+    if (!all(na.omit(df_min[[cols["tid"]]]) %in% lime[["tid"]]))
       stop("something's wrong: all IDs expected to be in workbook sheet - not true")
     
     li_start <- which(colnames(df) == cols[1L])
@@ -96,7 +99,7 @@ lixcel <- function(excelfile, sheet, lime, wave = "", destfile){
     
     token_lime <- setNames(lime[["token"]], lime[["tid"]])
     
-    if (!all(df[[ cols["token"] ]] == token_lime[as.character(df[[ cols["tid"] ]])]))
+    if (!all(na.omit(df_min[[ cols["token"] ]]) == token_lime[as.character(na.omit(df_min[[ cols["tid"] ]]))]))
       stop("tokens do not match - stopping as things might have been mixed up!")
     
     for (x in c("completed", "usesleft")){
