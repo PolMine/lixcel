@@ -29,62 +29,66 @@ Check for mail delivery failure, create respective column and move
 mails to trash.
 }
 \section{Public fields}{
-\if{html}{\out{<div class="r6-fields">}}
-\describe{
-\item{\code{mailing_id}}{Name of the mailing.}
+  \if{html}{\out{<div class="r6-fields">}}
+  \describe{
+    \item{\code{mailing_id}}{Name of the mailing.}
 
-\item{\code{wb}}{Keeps xlsx worbook.}
+    \item{\code{wb}}{Keeps xlsx worbook.}
 
-\item{\code{sheet}}{Name of the sheet with contact information.}
+    \item{\code{sheet}}{Name of the sheet with contact information.}
 
-\item{\code{data}}{A \code{data.frame} with content of sheet with contact information.}
+    \item{\code{data}}{A \code{data.frame} with content of sheet with contact information.}
 
-\item{\code{mailcol}}{Name of the column (length-one \code{character} vector) with
+    \item{\code{tidcol}}{Name of the column (length-one \code{character} vector) with tid.}
+
+    \item{\code{mailcol}}{Name of the column (length-one \code{character} vector) with
 Email addresses.}
 
-\item{\code{outlook}}{Object of class \code{ms_outlook} with login to outlook account.}
+    \item{\code{outlook}}{Object of class \code{ms_outlook} with login to outlook account.}
 
-\item{\code{template}}{The (loaded) template for Emails sent to respondents.}
+    \item{\code{template}}{The (loaded) template for Emails sent to respondents.}
 
-\item{\code{from}}{Sender of the mail.}
+    \item{\code{from}}{Sender of the mail.}
 
-\item{\code{bcc}}{BCC recipient.}
+    \item{\code{bcc}}{BCC recipient.}
 
-\item{\code{attachment}}{Filename of a file to attach.}
+    \item{\code{attachment}}{Filename of a file to attach.}
 
-\item{\code{smtp_server}}{Mailout server.}
+    \item{\code{smtp_server}}{Mailout server.}
 
-\item{\code{smtp_user}}{Valid user for the mailout server.}
+    \item{\code{smtp_user}}{Valid user for the mailout server.}
 
-\item{\code{smtp_port}}{Port of the smtp server to use.}
+    \item{\code{smtp_port}}{Port of the smtp server to use.}
 
-\item{\code{imap_url}}{URL of the IMAP mail server.}
+    \item{\code{imap_url}}{URL of the IMAP mail server.}
 
-\item{\code{imap_user}}{Username of the IMAP email account.}
+    \item{\code{imap_user}}{Username of the IMAP email account.}
 
-\item{\code{header_style}}{An openxlsx headerStyle for the column layout.}
-}
-\if{html}{\out{</div>}}
+    \item{\code{header_style}}{An openxlsx headerStyle for the column layout.}
+  }
+  \if{html}{\out{</div>}}
 }
 \section{Methods}{
 \subsection{Public methods}{
-\itemize{
-\item \href{#method-new}{\code{Mailing$new()}}
-\item \href{#method-write_mails}{\code{Mailing$write_mails()}}
-\item \href{#method-check_and_move}{\code{Mailing$check_and_move()}}
-\item \href{#method-mail_delivery_failure}{\code{Mailing$mail_delivery_failure()}}
-\item \href{#method-clone}{\code{Mailing$clone()}}
-}
+  \itemize{
+    \item \href{#method-Mailing-initialize}{\code{Mailing$new()}}
+    \item \href{#method-Mailing-write_mails}{\code{Mailing$write_mails()}}
+    \item \href{#method-Mailing-check_and_move}{\code{Mailing$check_and_move()}}
+    \item \href{#method-Mailing-mail_delivery_failure}{\code{Mailing$mail_delivery_failure()}}
+    \item \href{#method-Mailing-clone}{\code{Mailing$clone()}}
+  }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-new"></a>}}
-\if{latex}{\out{\hypertarget{method-new}{}}}
-\subsection{Method \code{new()}}{
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Mailing$new(
+\if{html}{\out{<a id="method-Mailing-initialize"></a>}}
+\if{latex}{\out{\hypertarget{method-Mailing-initialize}{}}}
+\subsection{\code{Mailing$new()}}{
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{Mailing$new(
   mailing_id,
   xlsx_file,
   sheet,
+  tidcol = "tid",
   mailcol,
   template,
   from,
@@ -95,129 +99,128 @@ Email addresses.}
   smtp_port,
   imap_url,
   imap_user
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{mailing_id}}{The ID of the mailing. Used for new columns.}
-
-\item{\code{xlsx_file}}{The Excel file with sheet with contact information.}
-
-\item{\code{sheet}}{Name of the sheet (length-one \code{character} vector) with
+)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{mailing_id}}{The ID of the mailing. Used for new columns.}
+      \item{\code{xlsx_file}}{The Excel file with sheet with contact information.}
+      \item{\code{sheet}}{Name of the sheet (length-one \code{character} vector) with
 contact information.}
-
-\item{\code{mailcol}}{Column of the \code{sheet} of the \code{xlsx_file} defining the
+      \item{\code{tidcol}}{Name of the column (length-one \code{character} vector) with tid.}
+      \item{\code{mailcol}}{Column of the \code{sheet} of the \code{xlsx_file} defining the
 mail address of the respondent.}
-
-\item{\code{template}}{Filename of the template of the email to be sent. Needs
+      \item{\code{template}}{Filename of the template of the email to be sent. Needs
 to be a plain text file. The content of this file will be loaded when
 initializing the class.}
-
-\item{\code{from}}{Sender of the Email, can be something such as "Donald Duck
+      \item{\code{from}}{Sender of the Email, can be something such as "Donald Duck
 \href{mailto:donaldduck@ducktown.org}{donaldduck@ducktown.org}".}
-
-\item{\code{bcc}}{BCC recipient of the Email, can be something such as "Donald
+      \item{\code{bcc}}{BCC recipient of the Email, can be something such as "Donald
 Duck \href{mailto:donaldduck@ducktown.org}{donaldduck@ducktown.org}"}
-
-\item{\code{attachment}}{File to be attached. \code{NULL} (default) if no file shall
+      \item{\code{attachment}}{File to be attached. \code{NULL} (default) if no file shall
 be attached.}
-
-\item{\code{smtp_server}}{SMTP server.}
-
-\item{\code{smtp_user}}{User for the SMTP server.}
-
-\item{\code{smtp_port}}{Port of the SMTP server.}
-
-\item{\code{imap_url}}{URL of the imap server.}
-
-\item{\code{imap_user}}{Username.}
-
-\item{\code{header_style}}{Default header style for new columns.}
+      \item{\code{smtp_server}}{SMTP server.}
+      \item{\code{smtp_user}}{User for the SMTP server.}
+      \item{\code{smtp_port}}{Port of the SMTP server.}
+      \item{\code{imap_url}}{URL of the imap server.}
+      \item{\code{imap_user}}{Username.}
+      \item{\code{header_style}}{Default header style for new columns.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
-\if{html}{\out{</div>}}
-}
-}
+
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-write_mails"></a>}}
-\if{latex}{\out{\hypertarget{method-write_mails}{}}}
-\subsection{Method \code{write_mails()}}{
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Mailing$write_mails(
+\if{html}{\out{<a id="method-Mailing-write_mails"></a>}}
+\if{latex}{\out{\hypertarget{method-Mailing-write_mails}{}}}
+\subsection{\code{Mailing$write_mails()}}{
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{Mailing$write_mails(
   subject,
   personalize = c("salutation", "token"),
   dryrun = TRUE,
   chunksize = 10L,
   wait = 65
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{subject}}{The subject of the mails to be sent.}
-
-\item{\code{personalize}}{In the template of the mail to be sent, fields defined
+)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{subject}}{The subject of the mails to be sent.}
+      \item{\code{personalize}}{In the template of the mail to be sent, fields defined
 by double angle brackets are assumed to be items for personalization.
 Fields defined by the personalize vector are substituted by the
 respective column of the parsed excel sheet.}
-}
-\if{html}{\out{</div>}}
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-check_and_move"></a>}}
-\if{latex}{\out{\hypertarget{method-check_and_move}{}}}
-\subsection{Method \code{check_and_move()}}{
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Mailing$check_and_move(sender, from = "INBOX", to = "Sent", move = FALSE)}\if{html}{\out{</div>}}
+      \item{\code{dryrun}}{A \code{logical} value.}
+      \item{\code{chunksize}}{Size of chunks, an \code{integer} value.}
+      \item{\code{wait}}{Waiting time.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{sender}}{Sender of the Email. Will be looked up in the FROM field
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Mailing-check_and_move"></a>}}
+\if{latex}{\out{\hypertarget{method-Mailing-check_and_move}{}}}
+\subsection{\code{Mailing$check_and_move()}}{
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{Mailing$check_and_move(sender, from = "INBOX", to = "Sent", move = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{sender}}{Sender of the Email. Will be looked up in the FROM field
 of the email.}
+      \item{\code{from}}{Folder with mails to be moved.}
+      \item{\code{to}}{Folder where to put the mails.}
+      \item{\code{move}}{A \code{logical} value.}
+    }
+    \if{html}{\out{</div>}}
+  }
+}
 
-\item{\code{from}}{Folder with mails to be moved.}
-
-\item{\code{to}}{Folder where to put the mails.}
-}
-\if{html}{\out{</div>}}
-}
-}
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-mail_delivery_failure"></a>}}
-\if{latex}{\out{\hypertarget{method-mail_delivery_failure}{}}}
-\subsection{Method \code{mail_delivery_failure()}}{
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Mailing$mail_delivery_failure(trash = "Gel&APY-schte Elemente", move = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<a id="method-Mailing-mail_delivery_failure"></a>}}
+\if{latex}{\out{\hypertarget{method-Mailing-mail_delivery_failure}{}}}
+\subsection{\code{Mailing$mail_delivery_failure()}}{
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{Mailing$mail_delivery_failure(trash = "Gel&APY-schte Elemente", move = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{trash}}{Trash folder of the Mail account.}
+      \item{\code{move}}{A \code{logical} value.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{trash}}{Trash folder of the Mail account.}
-}
-\if{html}{\out{</div>}}
-}
-}
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-clone"></a>}}
-\if{latex}{\out{\hypertarget{method-clone}{}}}
-\subsection{Method \code{clone()}}{
-The objects of this class are cloneable with this method.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Mailing$clone(deep = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<a id="method-Mailing-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-Mailing-clone}{}}}
+\subsection{\code{Mailing$clone()}}{
+  The objects of this class are cloneable with this method.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{Mailing$clone(deep = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{deep}}{Whether to make a deep clone.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{deep}}{Whether to make a deep clone.}
-}
-\if{html}{\out{</div>}}
-}
-}
 }

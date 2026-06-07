@@ -10,7 +10,7 @@ read_limetab(file)
 
 \method{summary}{limetab}(object, ...)
 
-lixcel(excelfile, sheet, lime, destfile)
+lixcel(excelfile, sheet, lime, wave = "", skip, destfile)
 }
 \arguments{
 \item{file}{File with LimeSurvey Data.}
@@ -25,17 +25,22 @@ lixcel(excelfile, sheet, lime, destfile)
 
 \item{lime}{A \code{limetab} object to feed in.}
 
+\item{wave}{Specification of wave, will be appended to the column names (tid,
+token, completed, usesleft).}
+
+\item{skip}{A vector of token ids to omit when evaluating}
+
 \item{destfile}{Output Excel file.}
 }
 \description{
 Read and process LimeSurvey table with keys
 }
 \examples{
-fname <- system.file(package = "lime", "extdata", "csv", "tokens_01.csv")
+fname <- system.file(package = "lixcel", "extdata", "csv", "tokens_01.csv")
 litab <- read_limetab(file = fname)
 summary(litab)
-excelfile <- system.file(package = "lime", "extdata", "xlsx", "contact_01.xlsx")
-fname <- system.file(package = "lime", "extdata", "csv", "tokens_01.csv")
+excelfile <- system.file(package = "lixcel", "extdata", "xlsx", "contact_01.xlsx")
+fname <- system.file(package = "lixcel", "extdata", "csv", "tokens_01.csv")
 litab <- read_limetab(file = fname)
 xlsx_sour <- tempfile(fileext = ".xlsx")
 
@@ -46,7 +51,7 @@ lixcel(
   destfile = xlsx_sour
 )
 
-fname <- system.file(package = "lime", "extdata", "csv", "tokens_02.csv")
+fname <- system.file(package = "lixcel", "extdata", "csv", "tokens_02.csv")
 litab <- read_limetab(file = fname)
 xlsx_update <- tempfile(fileext = ".xlsx")
 

@@ -3,7 +3,7 @@ ls_cols <- c("tid", "token", "completed", "usesleft")
 #' Read and process LimeSurvey table with keys
 #' 
 #' @examples
-#' fname <- system.file(package = "lime", "extdata", "csv", "tokens_01.csv")
+#' fname <- system.file(package = "lixcel", "extdata", "csv", "tokens_01.csv")
 #' litab <- read_limetab(file = fname)
 #' summary(litab)
 #' @importFrom tibble as_tibble
@@ -35,8 +35,8 @@ summary.limetab <- function(object, ...){
 }
 
 #' @examples
-#' excelfile <- system.file(package = "lime", "extdata", "xlsx", "contact_01.xlsx")
-#' fname <- system.file(package = "lime", "extdata", "csv", "tokens_01.csv")
+#' excelfile <- system.file(package = "lixcel", "extdata", "xlsx", "contact_01.xlsx")
+#' fname <- system.file(package = "lixcel", "extdata", "csv", "tokens_01.csv")
 #' litab <- read_limetab(file = fname)
 #' xlsx_sour <- tempfile(fileext = ".xlsx")
 #' 
@@ -47,7 +47,7 @@ summary.limetab <- function(object, ...){
 #'   destfile = xlsx_sour
 #' )
 #' 
-#' fname <- system.file(package = "lime", "extdata", "csv", "tokens_02.csv")
+#' fname <- system.file(package = "lixcel", "extdata", "csv", "tokens_02.csv")
 #' litab <- read_limetab(file = fname)
 #' xlsx_update <- tempfile(fileext = ".xlsx")
 #' 
@@ -60,8 +60,8 @@ summary.limetab <- function(object, ...){
 #' @export
 #' @rdname lime
 #' @importFrom openxlsx loadWorkbook read.xlsx writeDataTable saveWorkbook
-#'   writeData getStyles createStyle addStyle freezePane protectWorksheet
-#' @importFrom stats setNames
+#' @importFrom openxlsx writeData getStyles createStyle addStyle freezePane protectWorksheet
+#' @importFrom stats setNames na.omit
 #' @param excelfile An Excel file.
 #' @param sheet Name of the sheet to augment.
 #' @param lime A `limetab` object to feed in.

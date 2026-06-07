@@ -33,6 +33,7 @@ Mailing <- R6Class(
     #' @field wb Keeps xlsx worbook.
     #' @field sheet Name of the sheet with contact information.
     #' @field data A `data.frame` with content of sheet with contact information.
+    #' @field tidcol Name of the column (length-one `character` vector) with tid.
     #' @field mailcol Name of the column (length-one `character` vector) with
     #'   Email addresses.
     #' @field outlook Object of class `ms_outlook` with login to outlook account.
@@ -156,6 +157,9 @@ Mailing <- R6Class(
     
     #' @details Write mails.
     #' @param subject The subject of the mails to be sent.
+    #' @param dryrun A `logical` value.
+    #' @param chunksize Size of chunks, an `integer` value.
+    #' @param wait Waiting time.
     #' @param personalize In the template of the mail to be sent, fields defined
     #'   by double angle brackets are assumed to be items for personalization.
     #'   Fields defined by the personalize vector are substituted by the
@@ -245,6 +249,7 @@ Mailing <- R6Class(
     #'   of the email.
     #' @param from Folder with mails to be moved.
     #' @param to Folder where to put the mails.
+    #' @param move A `logical` value.
     #' @importFrom lubridate dmy
     check_and_move = function(sender, from = "INBOX", to = "Sent", move = FALSE){
       
@@ -325,6 +330,7 @@ Mailing <- R6Class(
     #' @details Check for mail delivery failure, create respective column and move
     #'   mails to trash.
     #' @param trash Trash folder of the Mail account.
+    #' @param move A `logical` value.
     mail_delivery_failure = function(trash = "Gel&APY-schte Elemente", move = FALSE){
       
       mail_passwd <- rstudioapi::askForPassword("Please enter password for Email")

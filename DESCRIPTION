@@ -1,8 +1,8 @@
 Package: lixcel
 Type: Package
 Title: Auxiliary functions for managing a LimeSurvey
-Version: 0.0.6
-Date: 2021-06-08
+Version: 0.0.7
+Date: 2026-06-07
 Authors@R: c(
   person("Andreas", "Blaette", role = c("aut", "cre"), email = "andreas.blaette@uni-due.de", comment = c(ORCID = "0000-0001-8970-8010"))
   )
@@ -15,10 +15,11 @@ Imports:
     Microsoft365R,
     mailR,
     rstudioapi,
-    mRpostman
+    mRpostman,
+    lubridate,
+    pbapply
 Suggests:
     knitr
-VignetteBuilder: knitr
 Description: Help to manage a LimeSurvey more efficiently.
 BugReports: https://github.com/PolMine/polmineR/issues
 Biarch: true
@@ -29,4 +30,4 @@ Collate:
     'lixcel.R'
     'mailing.R'
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.2
+Config/roxygen2/version: 8.0.0
