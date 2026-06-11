@@ -69,9 +69,9 @@ summary.limetab <- function(object, ...){
 #' @param wave Specification of wave, will be appended to the column names (tid,
 #'   token, completed, usesleft).
 #' @param skip A vector of token ids to omit when evaluating 
-lixcel <- function(excelfile, sheet, lime, wave = "", skip, destfile){
+lixcel <- function(excelfile, sheet, lime, wave = "", mailcol = NULL, skip, destfile){
   
-  cols <- paste(c("tid", "token", "completed", "usesleft" ), wave, sep = "")
+  cols <- paste(c("tid", "token", "completed", "usesleft" ), wave, sep = "_")
   names(cols) <- ls_cols
   
   wb <- loadWorkbook(file = excelfile)
@@ -114,11 +114,24 @@ lixcel <- function(excelfile, sheet, lime, wave = "", skip, destfile){
 
   } else {
     
+    if (!is.na(mailcol)){
+      has_mail <- !is.na(df[[mailcol]])
+      cli_alert_info("assign tokens for {sum(has_mail)} with mail address")
+      insert <- cols |>
+        lapply(function(col) rep(NA, times = nrow(df))) |>
+        as.data.frame()
+      colnames(insert) <- cols
+      insert[has_mail,] <- lime[1:sum(has_mail),]
+    } else {
+      insert <- lime
+    }
+    
+    
     headerStyle <- createStyle(
       fontSize = 12, fontColour = "#FFFFFF", halign = "center",
       fgFill = "#4F81BD", border = "TopBottom", borderColour = "#4F81BD"
     )
-    
+      
     addStyle(
       wb = wb, sheet = sheet,
       style = headerStyle,
@@ -127,7 +140,7 @@ lixcel <- function(excelfile, sheet, lime, wave = "", skip, destfile){
     
     writeData(
       wb = wb, sheet = sheet,
-      x = lime[1L:nrow(df),],
+      x = insert[1L:nrow(df),],
       startCol = ncol(df) + 1L,
       startRow = 1L,
       borderStyle = "none",

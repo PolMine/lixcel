@@ -92,7 +92,7 @@ Mailing <- R6Class(
     #' @param imap_url URL of the imap server.
     #' @param imap_user Username.
     #' @param header_style Default header style for new columns.
-    initialize = function(mailing_id, xlsx_file, sheet, tidcol = "tid", mailcol, template, from, bcc, attachment = NULL, smtp_server, smtp_user, smtp_port, imap_url, imap_user){
+    initialize = function(mailing_id, xlsx_file, sheet, namecol = "Name", funcol = "Funktion", gendercol = "Geschlecht", tidcol = "tid", mailcol, template, from, bcc, attachment = NULL, smtp_server, smtp_user, smtp_port, imap_url, imap_user){
       stopifnot(
         is.character(mailing_id),
         length(mailing_id) == 1L,
@@ -141,7 +141,6 @@ Mailing <- R6Class(
       stopifnot(mailcol %in% colnames(self$data))
       self$mailcol <- mailcol
       
-      # self$outlook <- get_business_outlook()
       self$template <- readLines(template)
       self$from <- from
       self$bcc <- bcc
@@ -154,24 +153,24 @@ Mailing <- R6Class(
       self$imap_user <- imap_user
       
       cli_alert_info("checking that required columns are available")
-      stopifnot("Name" %in% colnames(self$data))
+      stopifnot(namecol %in% colnames(self$data))
       stopifnot("Titel.(u.a..Prof.,.Dr.,.PhD)" %in% colnames(self$data))
-      stopifnot("Geschlecht" %in% colnames(self$data))
-      # stopifnot("OB/BM/BBM" %in% colnames(self$data))
-      
+      stopifnot(gendercol %in% colnames(self$data))
+
       cli_alert_info("splitting name into surname and forename")
       self$data$surname <- sapply(
-        strsplit(self$data[["Name"]], "\\s*,\\s*"),
+        strsplit(self$data[[namecol]], "\\s*,\\s*"),
         `[[`,
         1L
       )
       self$data$forename <- sapply(
-        strsplit(self$data[["Name"]], "\\s*,\\s*"),
+        strsplit(self$data[[namecol]], "\\s*,\\s*"),
         `[`,
         2L
       )
       
       cli_alert_info("generating salutation based on title")
+      
       title_col <- self$data[["Titel.(u.a..Prof.,.Dr.,.PhD)"]]
       title_col <- gsub("^(.*?)\\s*$", "\\1", title_col)
       title_col <- gsub("^Prof. Dr$", "Prof. Dr.", title_col)
@@ -182,34 +181,35 @@ Mailing <- R6Class(
       title_col <- gsub("^PD Dr.$", "Dr.", title_col)
       title_col <- ifelse(
         title_col == "Prof. Dr.",
-        ifelse(self$data[["Geschlecht"]] == "w", "Professorin", "Professor"),
+        ifelse(self$data[[gendercol]] == "w", "Professorin", "Professor"),
         title_col
       )
-      # unique(title_col[!is.na(title_col)]) # use as a check
       title_col <- ifelse(is.na(title_col), "", sprintf("%s ", title_col))
       
       salutation <- sprintf(
         ifelse(
-          self$data[["Geschlecht"]] == "w",
+          self$data[[gendercol]] == "w",
           "Sehr geehrte Frau %s%s",
           "Sehr geehrter Herr %s%s"
         ),
         title_col,
         self$data$surname
       )
+      salutation <- gsub("\u00a0", " ", salutation)
+      salutation <- gsub("\\s{2,}", " ", salutation)
       
-      if ("OB/BM/BBM" %in% colnames(self$data)){
-        self$data[["OB/BM/BBM"]] <- ifelse(
-          is.na(self$data[["OB/BM/BBM"]]),
+      if (funcol %in% colnames(self$data)){
+        self$data[[funcol]] <- ifelse(
+          is.na(self$data[[funcol]]),
           "",
-          self$data[["OB/BM/BBM"]]
+          self$data[[funcol]]
         )
         salutation <- ifelse(
-          self$data[["OB/BM/BBM"]] == "OB",
+          self$data[[funcol]] == "OB",
           sprintf(
             "%s%s",
             ifelse(
-              self$data[["Geschlecht"]] == "w",
+              self$data[[gendercol]] == "w",
               "Sehr geehrte Frau Oberb\u00fcrgermeisterin,<br/>",
               "Sehr geehrter Herr Oberb\u00fcrgermeister,<br/>"
             ),
@@ -218,11 +218,11 @@ Mailing <- R6Class(
           salutation
         )
         salutation <- ifelse(
-          self$data[["OB/BM/BBM"]] == "BM",
+          self$data[[funcol]] == "BM",
           sprintf(
             "%s%s",
             ifelse(
-              self$data[["Geschlecht"]] == "w",
+              self$data[[gendercol]] == "w",
               "Sehr geehrte Frau B\u00fcrgermeisterin,<br/>",
               "Sehr geehrter Herr B\u00fcrgermeister,<br/>"),
             salutation
@@ -233,15 +233,17 @@ Mailing <- R6Class(
         cli_alert_info("no column for adapting salutation for mayors")
       }
       
+      if (any(is.na(salutation)))
+        cli_alert_warning("found {length(is.na(salutation))} NA values for salutation")
       self$data$salutation <- salutation
       
       self$data$role <- ifelse(
-        self$data[["Geschlecht"]] == "w",
+        self$data[[gendercol]] == "w",
         "kommunale Mandatstr\u00e4gerin",
         "kommunalen Mandatstr\u00e4ger"
       )
       self$data$representative <- ifelse(
-        self$data[["Geschlecht"]] == "w",
+        self$data[[gendercol]] == "w",
         "Repr\u00e4sentantin",
         "Repr\u00e4sentant"
       )
@@ -295,7 +297,6 @@ Mailing <- R6Class(
           
           mail <- self$template
           for (replace in personalize){
-            print(replace)
             mail <- gsub(sprintf("<<%s>>", replace), case[[replace]], mail)
           }
             
@@ -341,7 +342,7 @@ Mailing <- R6Class(
               cli_alert_danger("failed to send to: {paste(recipient, collapse = ' / ')}")
             }
           }
-          Sys.sleep(0.5 + runif(1))
+          Sys.sleep(0.7)
         }
         cli_alert_info("taking a {wait} second break")
         Sys.sleep(time = wait)
