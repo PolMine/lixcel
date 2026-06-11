@@ -141,6 +141,7 @@ be attached.}
     \preformatted{Mailing$write_mails(
   subject,
   personalize = c("salutation", "token"),
+  tls = TRUE,
   dryrun = TRUE,
   chunksize = 10L,
   wait = 65
@@ -155,6 +156,7 @@ be attached.}
 by double angle brackets are assumed to be items for personalization.
 Fields defined by the personalize vector are substituted by the
 respective column of the parsed excel sheet.}
+      \item{\code{tls}}{A \code{logical} value, whether to use TLS for the SMTP connection.}
       \item{\code{dryrun}}{A \code{logical} value.}
       \item{\code{chunksize}}{Size of chunks, an \code{integer} value.}
       \item{\code{wait}}{Waiting time.}

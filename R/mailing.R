@@ -16,6 +16,7 @@
 #' [stackoverflow](https://stackoverflow.com/questions/57811999/rdcomclient-create-write-mail-to-drafts-folder-of-specific-account)),
 #' but this is a Windows only package.
 #' 
+#' @importFrom cli cli_alert_info cli_alert_success cli_alert_danger
 #' @importFrom pbapply pblapply
 #' @importFrom R6 R6Class
 #' @importFrom openxlsx loadWorkbook read.xlsx getSheetNames
@@ -152,13 +153,13 @@ Mailing <- R6Class(
       self$imap_url <- imap_url
       self$imap_user <- imap_user
       
-      message("checking that required columns are available")
+      cli_alert_info("checking that required columns are available")
       stopifnot("Name" %in% colnames(self$data))
       stopifnot("Titel.(u.a..Prof.,.Dr.,.PhD)" %in% colnames(self$data))
       stopifnot("Geschlecht" %in% colnames(self$data))
       # stopifnot("OB/BM/BBM" %in% colnames(self$data))
       
-      message("split name into surname and forename")
+      cli_alert_info("splitting name into surname and forename")
       self$data$surname <- sapply(
         strsplit(self$data[["Name"]], "\\s*,\\s*"),
         `[[`,
@@ -170,7 +171,7 @@ Mailing <- R6Class(
         2L
       )
       
-      message("generate salutation based on title")
+      cli_alert_info("generating salutation based on title")
       title_col <- self$data[["Titel.(u.a..Prof.,.Dr.,.PhD)"]]
       title_col <- gsub("^(.*?)\\s*$", "\\1", title_col)
       title_col <- gsub("^Prof. Dr$", "Prof. Dr.", title_col)
@@ -209,8 +210,8 @@ Mailing <- R6Class(
             "%s%s",
             ifelse(
               self$data[["Geschlecht"]] == "w",
-              "Sehr geehrte Frau Oberbürgermeisterin,<br/>",
-              "Sehr geehrter Herr Oberbürgermeister,<br/>"
+              "Sehr geehrte Frau Oberb\u00fcrgermeisterin,<br/>",
+              "Sehr geehrter Herr Oberb\u00fcrgermeister,<br/>"
             ),
             salutation
           ),
@@ -222,8 +223,8 @@ Mailing <- R6Class(
             "%s%s",
             ifelse(
               self$data[["Geschlecht"]] == "w",
-              "Sehr geehrte Frau Bürgermeisterin,<br/>",
-              "Sehr geehrter Herr Bürgermeister,<br/>"),
+              "Sehr geehrte Frau B\u00fcrgermeisterin,<br/>",
+              "Sehr geehrter Herr B\u00fcrgermeister,<br/>"),
             salutation
             ),
           salutation
@@ -236,13 +237,13 @@ Mailing <- R6Class(
       
       self$data$role <- ifelse(
         self$data[["Geschlecht"]] == "w",
-        "kommunale Mandatsträgerin",
-        "kommunalen Mandatsträger"
+        "kommunale Mandatstr\u00e4gerin",
+        "kommunalen Mandatstr\u00e4ger"
       )
       self$data$representative <- ifelse(
         self$data[["Geschlecht"]] == "w",
-        "Repräsentantin",
-        "Repräsentant"
+        "Repr\u00e4sentantin",
+        "Repr\u00e4sentant"
       )
       
       invisible(self)
@@ -250,6 +251,7 @@ Mailing <- R6Class(
     
     #' @details Write mails.
     #' @param subject The subject of the mails to be sent.
+    #' @param tls A `logical` value, whether to use TLS for the SMTP connection.
     #' @param dryrun A `logical` value.
     #' @param chunksize Size of chunks, an `integer` value.
     #' @param wait Waiting time.
@@ -279,7 +281,7 @@ Mailing <- R6Class(
       chunks <- split(self$data[[self$tidcol]], f = f)
       
       for (i in 1:length(chunks)){
-        message("PROCEEDING TO CHUNK ", i)
+        cli_alert_info("proceeding to chunk {i} of {length(chunks)}")
         chunk <- chunks[[i]]
         
         for (id in chunk){
@@ -314,12 +316,7 @@ Mailing <- R6Class(
           }
 
           if (!is.null(recipient)){
-            message(
-              sprintf(
-                "[%s] sending mail to: %s",
-                format(Sys.time()), paste(recipient, collapse = " / ")
-              )
-            )
+            cli_alert_info("sending mail to: {paste(recipient, collapse = ' / ')}")
             worked <- try({
               send.mail(
                 from = self$from,
@@ -335,16 +332,16 @@ Mailing <- R6Class(
               )
             })
             if (is(worked) == "try-error"){
-              message("FAIL: ", paste(recipient, collapse = " / "))
+              cli_alert_danger("failed to send to: {paste(recipient, collapse = ' / ')}")
             }
           }
           Sys.sleep(0.5 + runif(1))
         }
-        message(sprintf("... taking a %d second break ...", wait))
+        cli_alert_info("taking a {wait} second break")
         Sys.sleep(time = wait)
       }
       
-      message("*** MAILING FINISHED ***")
+      cli_alert_success("mailing finished")
       invisible(self)
     },
     
