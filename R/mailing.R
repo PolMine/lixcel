@@ -152,6 +152,99 @@ Mailing <- R6Class(
       self$imap_url <- imap_url
       self$imap_user <- imap_user
       
+      message("checking that required columns are available")
+      stopifnot("Name" %in% colnames(self$data))
+      stopifnot("Titel.(u.a..Prof.,.Dr.,.PhD)" %in% colnames(self$data))
+      stopifnot("Geschlecht" %in% colnames(self$data))
+      # stopifnot("OB/BM/BBM" %in% colnames(self$data))
+      
+      message("split name into surname and forename")
+      self$data$surname <- sapply(
+        strsplit(self$data[["Name"]], "\\s*,\\s*"),
+        `[[`,
+        1L
+      )
+      self$data$forename <- sapply(
+        strsplit(self$data[["Name"]], "\\s*,\\s*"),
+        `[[`,
+        2L
+      )
+      
+      message("generate salutation based on title")
+      title_col <- self$data[["Titel.(u.a..Prof.,.Dr.,.PhD)"]]
+      title_col <- gsub("^(.*?)\\s*$", "\\1", title_col)
+      title_col <- gsub("^Prof. Dr$", "Prof. Dr.", title_col)
+      title_col <- gsub("^Prof\\.$", "Prof. Dr.", title_col)
+      title_col <- gsub("^Prof\\.\\s*Dr\\.\\s*Ing\\.$", "Prof. Dr.", title_col)
+      title_col <- ifelse(title_col == "Dipl.-Ing.", NA, title_col)
+      title_col <- gsub("^Dr. Dr.$", "Dr.", title_col)
+      title_col <- gsub("^PD Dr.$", "Dr.", title_col)
+      title_col <- ifelse(
+        title_col == "Prof. Dr.",
+        ifelse(self$data[["Geschlecht"]] == "w", "Professorin", "Professor"),
+        title_col
+      )
+      # unique(title_col[!is.na(title_col)]) # use as a check
+      title_col <- ifelse(is.na(title_col), "", sprintf("%s ", title_col))
+      
+      salutation <- sprintf(
+        ifelse(
+          self$data[["Geschlecht"]] == "w",
+          "Sehr geehrte Frau %s%s",
+          "Sehr geehrter Herr %s%s"
+        ),
+        title_col,
+        self$data$surname
+      )
+      
+      if ("OB/BM/BBM" %in% colnames(self$data)){
+        self$data[["OB/BM/BBM"]] <- ifelse(
+          is.na(self$data[["OB/BM/BBM"]]),
+          "",
+          self$data[["OB/BM/BBM"]]
+        )
+        salutation <- ifelse(
+          self$data[["OB/BM/BBM"]] == "OB",
+          sprintf(
+            "%s%s",
+            ifelse(
+              self$data[["Geschlecht"]] == "w",
+              "Sehr geehrte Frau Oberbürgermeisterin,<br/>",
+              "Sehr geehrter Herr Oberbürgermeister,<br/>"
+            ),
+            salutation
+          ),
+          salutation
+        )
+        salutation <- ifelse(
+          self$data[["OB/BM/BBM"]] == "BM",
+          sprintf(
+            "%s%s",
+            ifelse(
+              self$data[["Geschlecht"]] == "w",
+              "Sehr geehrte Frau Bürgermeisterin,<br/>",
+              "Sehr geehrter Herr Bürgermeister,<br/>"),
+            salutation
+            ),
+          salutation
+        )
+      } else {
+        warning("no column for adapting ")
+      }
+      
+      self$data$salutation <- salutation
+      
+      self$data$role <- ifelse(
+        self$data[["Geschlecht"]] == "w",
+        "kommunale Mandatsträgerin",
+        "kommunalen Mandatsträger"
+      )
+      self$data$representative <- ifelse(
+        self$data[["Geschlecht"]] == "w",
+        "Repräsentantin",
+        "Repräsentant"
+      )
+      
       invisible(self)
     },
     
@@ -164,17 +257,24 @@ Mailing <- R6Class(
     #'   by double angle brackets are assumed to be items for personalization.
     #'   Fields defined by the personalize vector are substituted by the
     #'   respective column of the parsed excel sheet.
-    write_mails = function(subject, personalize = c("salutation", "token"), dryrun = TRUE, chunksize = 10L, wait = 65){
+    write_mails = function(subject, personalize = c("salutation", "token"), tls = TRUE, dryrun = TRUE, chunksize = 10L, wait = 65){
       
       mail_passwd <- rstudioapi::askForPassword("Please enter password for Email")
       smtp_data <- list(
-        host.name = self$smtp_server, port = self$smtp_port,
-        user.name = self$smtp_user, passwd = mail_passwd
+        host.name = self$smtp_server,
+        port = self$smtp_port,
+        user.name = self$smtp_user,
+        passwd = mail_passwd,
+        tls = tls
       )
       
       row_ids <- 1:nrow(self$data)
       f <- unlist(
-        lapply(unique(ceiling(row_ids / chunksize)), rep, times = chunksize)
+        lapply(
+          unique(ceiling(row_ids / chunksize)),
+          rep,
+          times = chunksize
+        )
       )[row_ids]
       chunks <- split(self$data[[self$tidcol]], f = f)
       
@@ -216,16 +316,21 @@ Mailing <- R6Class(
           if (!is.null(recipient)){
             message(
               sprintf(
-                "[%s] sending mail (tid %d): %s",
-                format(Sys.time()), id, paste(recipient, collapse = " / ")
+                "[%s] sending mail to: %s",
+                format(Sys.time()), paste(recipient, collapse = " / ")
               )
             )
             worked <- try({
               send.mail(
-                from = self$from, to = recipient, bcc = self$bcc,
-                subject = subject, body = body, encoding = "utf-8",
+                from = self$from,
+                to = recipient,
+                bcc = self$bcc,
+                subject = subject,
+                body = body,
+                encoding = "utf-8",
                 attach.files = self$attachment,
-                smtp = smtp_data, authenticate = TRUE,
+                smtp = smtp_data,
+                authenticate = TRUE,
                 html = TRUE
               )
             })
@@ -257,7 +362,8 @@ Mailing <- R6Class(
       
       tmp_data <- read.xlsx(self$wb, sheet = self$sheet)
       con <- configure_imap(
-        username = self$imap_user, password = mail_passwd,
+        username = self$imap_user,
+        password = mail_passwd,
         url = self$imap_url
       )
       con$select_folder(name = from)
@@ -336,7 +442,8 @@ Mailing <- R6Class(
       mail_passwd <- rstudioapi::askForPassword("Please enter password for Email")
       
       con <- configure_imap(
-        username = self$imap_user, password = mail_passwd,
+        username = self$imap_user,
+        password = mail_passwd,
         url = self$imap_url
       )
       
