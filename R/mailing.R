@@ -16,7 +16,7 @@
 #' [stackoverflow](https://stackoverflow.com/questions/57811999/rdcomclient-create-write-mail-to-drafts-folder-of-specific-account)),
 #' but this is a Windows only package.
 #' 
-#' @importFrom cli cli_alert_info cli_alert_success cli_alert_danger
+#' @importFrom cli cli_alert_info cli_alert_success cli_alert_danger cli_alert_warning
 #' @importFrom pbapply pblapply
 #' @importFrom R6 R6Class
 #' @importFrom openxlsx loadWorkbook read.xlsx getSheetNames
@@ -415,7 +415,7 @@ Mailing <- R6Class(
             email, function(m) grep(m, tmp_data[[self$mailcol]])
           )))
           if (length(row_indices) > 1L){
-            warning(sprintf("Multiple rows with Email: %s", email))
+            cli_alert_warning("Multiple rows with Email: {email}")
           }
           for (row_index in row_indices){
             tmp_data <- read.xlsx(self$wb, sheet = self$sheet)
@@ -461,6 +461,7 @@ Mailing <- R6Class(
         expr = "The following addresses had permanent fatal errors",
         where = "BODY"
       )
+      cli_alert_info("mails with fatal errors in INBOX: {length(failed_mails_index)}")
       
       tmp_data <- read.xlsx(self$wb, sheet = self$sheet)
       failed_col <- paste(self$mailing_id, "delivery_status", sep = "_")
@@ -481,8 +482,8 @@ Mailing <- R6Class(
             body <- strsplit(con$fetch_body(i)[[sprintf("body%d", i)]], "\\r\\n")[[1]]
             err_ix <- grep("\\s+-+ The following addresses had permanent fatal errors\\s-+", body)
             email <- gsub("^<(.*?)>$", "\\1", body[err_ix[1] + 1])
-            if (length(email) > 1) warning("Cannot extract mail: ", email)
-            if (!grepl("@", email[1])) warning("Does not look like Email: ", email[1])
+            if (length(email) > 1) cli_alert_warning("Cannot extract mail: {email}")
+            if (!grepl("@", email[1])) cli_alert_warning("Does not look like Email: {email[1]}")
             email[1]
           }
         ))
@@ -492,7 +493,7 @@ Mailing <- R6Class(
           function(m){
             row_index <- grep(m, tmp_data[[self$mailcol]])
             if (length(row_index) != 1L){
-              warning(sprintf("Cannot look up: %s", m))
+              cli_alert_warning("Cannot look up: {m}")
               return(NA)
             }
             row_index
