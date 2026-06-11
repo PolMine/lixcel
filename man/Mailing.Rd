@@ -144,7 +144,8 @@ be attached.}
   tls = TRUE,
   dryrun = TRUE,
   chunksize = 10L,
-  wait = 65
+  wait = 65,
+  pwd = NULL
 )}
     \if{html}{\out{</div>}}
   }
@@ -160,6 +161,7 @@ respective column of the parsed excel sheet.}
       \item{\code{dryrun}}{A \code{logical} value.}
       \item{\code{chunksize}}{Size of chunks, an \code{integer} value.}
       \item{\code{wait}}{Waiting time.}
+      \item{\code{pwd}}{Password for the mail account.}
     }
     \if{html}{\out{</div>}}
   }
@@ -171,7 +173,13 @@ respective column of the parsed excel sheet.}
 \subsection{\code{Mailing$check_and_move()}}{
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{Mailing$check_and_move(sender, from = "INBOX", to = "Sent", move = FALSE)}
+    \preformatted{Mailing$check_and_move(
+  sender,
+  from = "INBOX",
+  to = "Sent",
+  move = FALSE,
+  pwd = NULL
+)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
@@ -182,6 +190,7 @@ of the email.}
       \item{\code{from}}{Folder with mails to be moved.}
       \item{\code{to}}{Folder where to put the mails.}
       \item{\code{move}}{A \code{logical} value.}
+      \item{\code{pwd}}{Password for the mail account.}
     }
     \if{html}{\out{</div>}}
   }
@@ -193,7 +202,11 @@ of the email.}
 \subsection{\code{Mailing$mail_delivery_failure()}}{
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{Mailing$mail_delivery_failure(trash = "Gel&APY-schte Elemente", move = FALSE)}
+    \preformatted{Mailing$mail_delivery_failure(
+  trash = "Gel&APY-schte Elemente",
+  move = FALSE,
+  pwd = NULL
+)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
@@ -201,6 +214,7 @@ of the email.}
     \describe{
       \item{\code{trash}}{Trash folder of the Mail account.}
       \item{\code{move}}{A \code{logical} value.}
+      \item{\code{pwd}}{Password for the mail account.}
     }
     \if{html}{\out{</div>}}
   }
