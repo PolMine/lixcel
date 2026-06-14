@@ -77,6 +77,9 @@ Mailing <- R6Class(
     #'    contact information.
     #' @param mailcol Column of the `sheet` of the `xlsx_file` defining the 
     #'   mail address of the respondent.
+    #' @param namecol Column with the name of the respondent (comma separated).
+    #' @param funcol Column with the function of the respondent.
+    #' @param gendercol Column with the gender of the respondent.
     #' @param template Filename of the template of the email to be sent. Needs
     #'   to be a plain text file. The content of this file will be loaded when
     #'   initializing the class.
@@ -256,13 +259,15 @@ Mailing <- R6Class(
     #' @param tls A `logical` value, whether to use TLS for the SMTP connection.
     #' @param dryrun A `logical` value.
     #' @param chunksize Size of chunks, an `integer` value.
+    #' @param sleep Delay between mails in seconds, passed into `Sys.sleep()`.
+    #' @param jitter Passed into `runif()`, a random delay added to delay sleep.
     #' @param wait Waiting time.
     #' @param personalize In the template of the mail to be sent, fields defined
     #'   by double angle brackets are assumed to be items for personalization.
     #'   Fields defined by the personalize vector are substituted by the
     #'   respective column of the parsed excel sheet.
     #' @param pwd Password for the mail account.
-    write_mails = function(subject, personalize = c("salutation", "token"), tls = TRUE, dryrun = TRUE, chunksize = 10L, wait = 65, pwd = NULL){
+    write_mails = function(subject, personalize = c("salutation", "token"), tls = TRUE, dryrun = TRUE, chunksize = 10L, wait = 0.5, jitter = 1, sleep = 65, pwd = NULL){
       
       if (is.null(pwd))
         pwd <- rstudioapi::askForPassword("Please enter password for Email")
@@ -288,6 +293,8 @@ Mailing <- R6Class(
       for (i in 1:length(chunks)){
         cli_alert_info("proceeding to chunk {i} of {length(chunks)}")
         chunk <- chunks[[i]]
+        
+        started <- Sys.time()
         
         for (id in chunk){
           
@@ -342,10 +349,15 @@ Mailing <- R6Class(
               cli_alert_danger("failed to send to: {paste(recipient, collapse = ' / ')}")
             }
           }
-          Sys.sleep(0.7)
+          wait_secs <- wait + runif(n = 1, max = jitter)
+          cli_alert_info("delay before sending next mail: {wait_secs}")
+          Sys.sleep(wait_secs)
+          
         }
-        cli_alert_info("taking a {wait} second break")
-        Sys.sleep(time = wait)
+        duration <- format(Sys.time() - started)
+        cli_alert_info("sent messages to {length(chunk)} recipients in {duration}")
+        cli_alert_info("sleeping for {sleep} seconds")
+        Sys.sleep(time = sleep)
       }
       
       cli_alert_success("mailing finished")
@@ -360,8 +372,12 @@ Mailing <- R6Class(
     #' @param to Folder where to put the mails.
     #' @param move A `logical` value.
     #' @param pwd Password for the mail account.
+    #' @param buffersize `integer` value passed into `configure_imap()` to avoid
+    #'   issues when processing many messages.
+    #' @param esearch `logical` value, to avoid issues with a large number of messages.
+    #' @param verbose A `logical` value, so that you would see truncation.
     #' @importFrom lubridate dmy
-    check_and_move = function(sender, from = "INBOX", to = "Sent", move = FALSE, pwd = NULL){
+    check_and_move = function(sender, from = "INBOX", to = "Sent", buffersize = 4194304, esearch = TRUE, verbose = TRUE, move = FALSE, pwd = NULL){
       
       if (is.null(pwd))
         pwd <- rstudioapi::askForPassword("Please enter password for Email")
@@ -427,7 +443,8 @@ Mailing <- R6Class(
               new_cell_content <- paste(old_cell_content, new_cell_content, sep = " // ")
             }
             writeData(
-              wb = self$wb, sheet = self$sheet,
+              wb = self$wb,
+              sheet = self$sheet,
               x = new_cell_content,
               startCol = mailout_col_index,
               startRow = row_index + 1L,
@@ -474,7 +491,7 @@ Mailing <- R6Class(
         failed_col_no <- ncol(tmp_data) + 1L
       }
       
-      if (is.na(failed_mails_index)) failed_mails_index <- c()
+      if (length(failed_mails_index) == 0) failed_mails_index <- c()
       if (length(failed_mails_index) > 0L){
         
         failed_mails <- unlist(lapply(
@@ -521,7 +538,7 @@ Mailing <- R6Class(
         }
 
         if (move) con$move_msg(
-          failed_mails_index[identified],
+          na.omit(failed_mails_index[identified]),
           to_folder = trash
         )
       }

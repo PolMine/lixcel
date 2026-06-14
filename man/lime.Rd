@@ -10,7 +10,7 @@ read_limetab(file)
 
 \method{summary}{limetab}(object, ...)
 
-lixcel(excelfile, sheet, lime, wave = "", skip, destfile)
+lixcel(excelfile, sheet, lime, wave = "", mailcol = NULL, skip, destfile)
 }
 \arguments{
 \item{file}{File with LimeSurvey Data.}
@@ -27,6 +27,9 @@ lixcel(excelfile, sheet, lime, wave = "", skip, destfile)
 
 \item{wave}{Specification of wave, will be appended to the column names (tid,
 token, completed, usesleft).}
+
+\item{mailcol}{The column in the Excel sheet with the email address. If
+provided, the tokens are added only if an Email address is available.}
 
 \item{skip}{A vector of token ids to omit when evaluating}
 

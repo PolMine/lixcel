@@ -88,6 +88,9 @@ Email addresses.}
   mailing_id,
   xlsx_file,
   sheet,
+  namecol = "Name",
+  funcol = "Funktion",
+  gendercol = "Geschlecht",
   tidcol = "tid",
   mailcol,
   template,
@@ -109,6 +112,9 @@ Email addresses.}
       \item{\code{xlsx_file}}{The Excel file with sheet with contact information.}
       \item{\code{sheet}}{Name of the sheet (length-one \code{character} vector) with
 contact information.}
+      \item{\code{namecol}}{Column with the name of the respondent (comma separated).}
+      \item{\code{funcol}}{Column with the function of the respondent.}
+      \item{\code{gendercol}}{Column with the gender of the respondent.}
       \item{\code{tidcol}}{Name of the column (length-one \code{character} vector) with tid.}
       \item{\code{mailcol}}{Column of the \code{sheet} of the \code{xlsx_file} defining the
 mail address of the respondent.}
@@ -144,7 +150,9 @@ be attached.}
   tls = TRUE,
   dryrun = TRUE,
   chunksize = 10L,
-  wait = 65,
+  wait = 0.5,
+  jitter = 1,
+  sleep = 65,
   pwd = NULL
 )}
     \if{html}{\out{</div>}}
@@ -161,6 +169,8 @@ respective column of the parsed excel sheet.}
       \item{\code{dryrun}}{A \code{logical} value.}
       \item{\code{chunksize}}{Size of chunks, an \code{integer} value.}
       \item{\code{wait}}{Waiting time.}
+      \item{\code{jitter}}{Passed into \code{runif()}, a random delay added to delay sleep.}
+      \item{\code{sleep}}{Delay between mails in seconds, passed into \code{Sys.sleep()}.}
       \item{\code{pwd}}{Password for the mail account.}
     }
     \if{html}{\out{</div>}}
@@ -177,6 +187,9 @@ respective column of the parsed excel sheet.}
   sender,
   from = "INBOX",
   to = "Sent",
+  buffersize = 4194304,
+  esearch = TRUE,
+  verbose = TRUE,
   move = FALSE,
   pwd = NULL
 )}
@@ -189,6 +202,10 @@ respective column of the parsed excel sheet.}
 of the email.}
       \item{\code{from}}{Folder with mails to be moved.}
       \item{\code{to}}{Folder where to put the mails.}
+      \item{\code{buffersize}}{\code{integer} value passed into \code{configure_imap()} to avoid
+issues when processing many messages.}
+      \item{\code{esearch}}{\code{logical} value, to avoid issues with a large number of messages.}
+      \item{\code{verbose}}{A \code{logical} value, so that you would see truncation.}
       \item{\code{move}}{A \code{logical} value.}
       \item{\code{pwd}}{Password for the mail account.}
     }

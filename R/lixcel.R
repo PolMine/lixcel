@@ -69,6 +69,8 @@ summary.limetab <- function(object, ...){
 #' @param wave Specification of wave, will be appended to the column names (tid,
 #'   token, completed, usesleft).
 #' @param skip A vector of token ids to omit when evaluating 
+#' @param mailcol The column in the Excel sheet with the email address. If 
+#'   provided, the tokens are added only if an Email address is available.
 lixcel <- function(excelfile, sheet, lime, wave = "", mailcol = NULL, skip, destfile){
   
   cols <- paste(c("tid", "token", "completed", "usesleft" ), wave, sep = "_")
@@ -114,7 +116,7 @@ lixcel <- function(excelfile, sheet, lime, wave = "", mailcol = NULL, skip, dest
 
   } else {
     
-    if (!is.na(mailcol)){
+    if (!is.null(mailcol)){
       has_mail <- !is.na(df[[mailcol]])
       cli_alert_info("assign tokens for {sum(has_mail)} with mail address")
       insert <- cols |>
