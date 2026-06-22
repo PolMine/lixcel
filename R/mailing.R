@@ -256,6 +256,7 @@ Mailing <- R6Class(
       invisible(self)
     },
     
+    #' @details Validate mail addresses.
     validate_emails = function(){
       cli::cli_alert_info("check mail adresses for known issues")
       if (any(is.na(self$data[[self$mailcol]]))){
@@ -265,10 +266,15 @@ Mailing <- R6Class(
       
       if (any(grepl("\u00A0", self$data[[self$mailcol]]))){
         cli::cli_alert_danger("invalid NO-BREAK SPACE in column {self$mailcol}")
+        for (i in which(grepl("\u00A0", self$data[[self$mailcol]]))){
+          cli::cli_alert_info(
+            "mail address with NO-BREAK SPACE: {self$data[[self$mailcol]][i]}"
+          )
+        }
         return(invisible(NULL))
       }
       
-      if (!all(grepl("@", self$data[[data$mailcol]]))){
+      if (!all(grepl("@", self$data[[self$mailcol]]))){
         cli::cli_alert_danger("missing '@' in at least one mail address")
         return(invisible(NULL))
       }
@@ -283,9 +289,17 @@ Mailing <- R6Class(
         return(invisible(NULL))
       }
       
-      regex_email <- "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{3,}$"
-      if (any(grepl(regex_email, self$data[[self$mailcol]]))){
+      regex_email <- "^[A-Za-z0-9\\._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
+      email <- unlist(strsplit(self$data[[self$mailcol]], "\\n"))
+      email <- gsub("^\\s*(.*?)\\s*", "\\1", email)
+      if (!all(grepl(regex_email, email))){
         cli::cli_alert_danger("found invalid mail address")
+        for (i in which(!grepl(regex_email, email))){
+          cli::cli_alert_info(
+            "invalid mail address: {self$data[[self$mailcol]][i]}"
+          )
+        }
+        
         return(invisible(NULL))
       }
       cli::cli_alert_success("no known issues found in mail adresses")
@@ -308,46 +322,15 @@ Mailing <- R6Class(
     write_mails = function(subject, personalize = c("salutation", "token"), tls = TRUE, dryrun = TRUE, chunksize = 10L, wait = 0.5, jitter = 1, sleep = 65, pwd = NULL){
       
       # checks to exclude known issues with mail adresses
-      cli::cli_alert_info("check mail adresses for known issues")
-      if (any(is.na(self$data[[self$mailcol]]))){
-        cli::cli_alert_danger("NA values for column {self$mailcol} in data")
-        return(invisible(NULL))
-      }
-      
-      if (any(grepl("\u00A0", self$data[[self$mailcol]]))){
-        cli::cli_alert_danger("invalid NO-BREAK SPACE in column {self$mailcol}")
-        return(invisible(NULL))
-      }
-      
-      if (!all(grepl("@", self$data[[data$mailcol]]))){
-        cli::cli_alert_danger("missing '@' in at least one mail address")
-        return(invisible(NULL))
-      }
-      
-      if (any(grepl("\u00A0", self$data[[self$mailcol]]))){
-        cli::cli_alert_danger("invalid NO-BREAK SPACE in column {self$mailcol}")
-        return(invisible(NULL))
-      }
-      
-      if (any(grepl("^\\s*$", self$data[[self$mailcol]]))){
-        cli::cli_alert_danger("whitespace without mail address")
-        return(invisible(NULL))
-      }
-      
-      regex_email <- "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{3,}$"
-      if (any(grepl(regex_email, self$data[[self$mailcol]]))){
-        cli::cli_alert_danger("found invalid mail address")
-        return(invisible(NULL))
-      }
-      cli::cli_alert_success("no known issues found in mail adresses")
-      
+      self$validate_emails()
+
       cli::cli_alert_info("check salutation for known issues")
-      if (any(is.na(self$data[[data$salutation]]))){
+      if (any(is.na(self$data$salutation))){
         cli::cli_alert_danger("NA values in column for salutation")
         return(invisible(NULL))
       }
       
-      if (any(grepl("NA", self$data[[data$salutation]]))){
+      if (any(grepl("NA", self$data$salutation))){
         cli::cli_alert_danger("'NA' in column for salutation")
         return(invisible(NULL))
       }

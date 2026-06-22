@@ -20,6 +20,8 @@ promising alternative (see
 \href{https://stackoverflow.com/questions/57811999/rdcomclient-create-write-mail-to-drafts-folder-of-specific-account}{stackoverflow}),
 but this is a Windows only package.
 
+Validate mail addresses.
+
 Write mails.
 
 Move Mails sent from a specified mail address to a designated
