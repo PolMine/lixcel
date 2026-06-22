@@ -117,10 +117,6 @@ Mailing <- R6Class(
         is.character(bcc),
         length(bcc) == 1L,
         
-        is.character(attachment),
-        length(attachment) == 1L,
-        file.exists(attachment),
-        
         is.character(smtp_server),
         length(smtp_server) == 1L,
         
@@ -131,6 +127,14 @@ Mailing <- R6Class(
         length(smtp_port) == 1L
         
       )
+      
+      if (!is.null(attachment)){
+        stopifnot(
+          is.character(attachment),
+          length(attachment) == 1L,
+          file.exists(attachment)
+        )
+      }
       
       self$mailing_id <- mailing_id
       
@@ -292,15 +296,26 @@ Mailing <- R6Class(
       regex_email <- "^[A-Za-z0-9\\._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
       email <- unlist(strsplit(self$data[[self$mailcol]], "\\n"))
       email <- gsub("^\\s*(.*?)\\s*", "\\1", email)
+      
+      if (any(grepl("^\\s*$", email))){
+        cli::cli_alert_danger("surplus linebreak")
+        idx <- which(grepl("^\\s*\\n", self$data[[self$mailcol]]))
+        for (i in idx)
+          cli::cli_alert_info(
+            "inspect mail address: {self$data[[self$mailcol]][i]}"
+          )
+        return(self$data[[self$mailcol]][idx])
+      }
+      
       if (!all(grepl(regex_email, email))){
         cli::cli_alert_danger("found invalid mail address")
         for (i in which(!grepl(regex_email, email))){
           cli::cli_alert_info(
-            "invalid mail address: {self$data[[self$mailcol]][i]}"
+            "invalid mail address: {email[i]}"
           )
         }
         
-        return(invisible(NULL))
+        return(email[which(!grepl(regex_email, email))])
       }
       cli::cli_alert_success("no known issues found in mail adresses")
       invisible(self)
@@ -371,6 +386,7 @@ Mailing <- R6Class(
           
           mail <- self$template
           for (replace in personalize){
+            print(replace)
             mail <- gsub(sprintf("<<%s>>", replace), case[[replace]], mail)
           }
             

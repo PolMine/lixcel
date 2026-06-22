@@ -18,7 +18,8 @@ Imports:
     rstudioapi,
     mRpostman,
     lubridate,
-    pbapply
+    pbapply,
+    dplyr
 Suggests:
     knitr
 Description: Help to manage a LimeSurvey more efficiently.

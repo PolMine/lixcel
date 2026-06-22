@@ -62,16 +62,16 @@ summary.limetab <- function(object, ...){
 #' @importFrom openxlsx loadWorkbook read.xlsx writeDataTable saveWorkbook
 #' @importFrom openxlsx writeData getStyles createStyle addStyle freezePane protectWorksheet
 #' @importFrom stats setNames na.omit
+#' @importFrom dplyr left_join
 #' @param excelfile An Excel file.
 #' @param sheet Name of the sheet to augment.
 #' @param lime A `limetab` object to feed in.
 #' @param destfile Output Excel file.
 #' @param wave Specification of wave, will be appended to the column names (tid,
 #'   token, completed, usesleft).
-#' @param skip A vector of token ids to omit when evaluating 
 #' @param mailcol The column in the Excel sheet with the email address. If 
 #'   provided, the tokens are added only if an Email address is available.
-lixcel <- function(excelfile, sheet, lime, wave = "", mailcol = NULL, skip, destfile){
+lixcel <- function(excelfile, sheet, lime, wave = "", mailcol = NULL, destfile){
   
   cols <- paste(c("tid", "token", "completed", "usesleft" ), wave, sep = "_")
   names(cols) <- ls_cols
@@ -81,15 +81,19 @@ lixcel <- function(excelfile, sheet, lime, wave = "", mailcol = NULL, skip, dest
   if (!sheet %in% names(wb)) stop("sheet not available")
   df <- read.xlsx(wb, sheet = sheet)
   
-  df_min <- if (!missing(skip)) df[!df[[cols["tid"]]] %in% skip,] else df
-
   if (nrow(lime) < nrow(df))
     stop("lime survey data has less rows than excel sheet")
   
+  tokencol <- na.omit(df[[cols["token"]]])
+  if (length(unique(tokencol)) < length(tokencol))
+    stop("tokens are not unique")
+  
   if (all(cols %in% colnames(df))){
     
-    if (!all(na.omit(df_min[[cols["tid"]]]) %in% lime[["tid"]]))
-      stop("something's wrong: all IDs expected to be in workbook sheet - not true")
+    if (!all(na.omit(df[[cols["tid"]]]) %in% lime[["tid"]]))
+      stop(
+        "something's wrong: all IDs expected to be in workbook sheet - not true"
+      )
     
     li_start <- which(colnames(df) == cols[1L])
     if (!all(
@@ -99,15 +103,19 @@ lixcel <- function(excelfile, sheet, lime, wave = "", mailcol = NULL, skip, dest
       stop("order of column names not matching")
     }
     
-    token_lime <- setNames(lime[["token"]], lime[["tid"]])
-    
-    if (!all(na.omit(df_min[[ cols["token"] ]]) == token_lime[as.character(na.omit(df_min[[ cols["tid"] ]]))]))
-      stop("tokens do not match - stopping as things might have been mixed up!")
+    df_min <- df[, cols[c("tid", "token")]]
+    colnames(df_min) <- c("tid", "token")
+    df_min <- left_join(
+      x = df_min,
+      y = limetab,
+      by = c("tid", "token")
+    )
     
     for (x in c("completed", "usesleft")){
       writeData(
-        wb = wb, sheet = sheet,
-        x = setNames(lime[[x]], lime[["token"]])[df[[ cols["token"] ]]],
+        wb = wb,
+        sheet = sheet,
+        x = df_min[[x]],
         startCol = which(colnames(df) == cols[x]),
         startRow = 2L
       )
@@ -173,7 +181,10 @@ lixcel <- function(excelfile, sheet, lime, wave = "", mailcol = NULL, skip, dest
     )
   }
 
-  saveWorkbook(wb = wb, file = destfile, overwrite = FALSE)
-  
+  saveWorkbook(
+    wb = wb,
+    file = destfile,
+    overwrite = FALSE
+  )
 }
 
