@@ -72,6 +72,7 @@ Email addresses.}
 \subsection{Public methods}{
   \itemize{
     \item \href{#method-Mailing-initialize}{\code{Mailing$new()}}
+    \item \href{#method-Mailing-validate_emails}{\code{Mailing$validate_emails()}}
     \item \href{#method-Mailing-write_mails}{\code{Mailing$write_mails()}}
     \item \href{#method-Mailing-check_and_move}{\code{Mailing$check_and_move()}}
     \item \href{#method-Mailing-mail_delivery_failure}{\code{Mailing$mail_delivery_failure()}}
@@ -139,6 +140,17 @@ be attached.}
 }
 
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Mailing-validate_emails"></a>}}
+\if{latex}{\out{\hypertarget{method-Mailing-validate_emails}{}}}
+\subsection{\code{Mailing$validate_emails()}}{
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{Mailing$validate_emails()}
+    \if{html}{\out{</div>}}
+  }
+}
+
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Mailing-write_mails"></a>}}
 \if{latex}{\out{\hypertarget{method-Mailing-write_mails}{}}}
 \subsection{\code{Mailing$write_mails()}}{
@@ -190,6 +202,7 @@ respective column of the parsed excel sheet.}
   buffersize = 4194304,
   esearch = TRUE,
   verbose = TRUE,
+  dryrun = TRUE,
   move = FALSE,
   pwd = NULL
 )}
@@ -204,8 +217,11 @@ of the email.}
       \item{\code{to}}{Folder where to put the mails.}
       \item{\code{buffersize}}{\code{integer} value passed into \code{configure_imap()} to avoid
 issues when processing many messages.}
-      \item{\code{esearch}}{\code{logical} value, to avoid issues with a large number of messages.}
+      \item{\code{esearch}}{\code{logical} value, to avoid issues with a large number of
+messages.}
       \item{\code{verbose}}{A \code{logical} value, so that you would see truncation.}
+      \item{\code{dryrun}}{A \code{logical} value, if \code{TRUE}, the evaluation results will
+not be written to the Excel sheet.}
       \item{\code{move}}{A \code{logical} value.}
       \item{\code{pwd}}{Password for the mail account.}
     }

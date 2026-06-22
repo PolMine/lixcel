@@ -159,6 +159,8 @@ Mailing <- R6Class(
       stopifnot(namecol %in% colnames(self$data))
       stopifnot("Titel.(u.a..Prof.,.Dr.,.PhD)" %in% colnames(self$data))
       stopifnot(gendercol %in% colnames(self$data))
+      
+      
 
       cli_alert_info("splitting name into surname and forename")
       self$data$surname <- sapply(
@@ -254,6 +256,42 @@ Mailing <- R6Class(
       invisible(self)
     },
     
+    validate_emails = function(){
+      cli::cli_alert_info("check mail adresses for known issues")
+      if (any(is.na(self$data[[self$mailcol]]))){
+        cli::cli_alert_danger("NA values for column {self$mailcol} in data")
+        return(invisible(NULL))
+      }
+      
+      if (any(grepl("\u00A0", self$data[[self$mailcol]]))){
+        cli::cli_alert_danger("invalid NO-BREAK SPACE in column {self$mailcol}")
+        return(invisible(NULL))
+      }
+      
+      if (!all(grepl("@", self$data[[data$mailcol]]))){
+        cli::cli_alert_danger("missing '@' in at least one mail address")
+        return(invisible(NULL))
+      }
+      
+      if (any(grepl("\u00A0", self$data[[self$mailcol]]))){
+        cli::cli_alert_danger("invalid NO-BREAK SPACE in column {self$mailcol}")
+        return(invisible(NULL))
+      }
+      
+      if (any(grepl("^\\s*$", self$data[[self$mailcol]]))){
+        cli::cli_alert_danger("whitespace without mail address")
+        return(invisible(NULL))
+      }
+      
+      regex_email <- "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{3,}$"
+      if (any(grepl(regex_email, self$data[[self$mailcol]]))){
+        cli::cli_alert_danger("found invalid mail address")
+        return(invisible(NULL))
+      }
+      cli::cli_alert_success("no known issues found in mail adresses")
+      invisible(self)
+    },
+
     #' @details Write mails.
     #' @param subject The subject of the mails to be sent.
     #' @param tls A `logical` value, whether to use TLS for the SMTP connection.
@@ -268,6 +306,52 @@ Mailing <- R6Class(
     #'   respective column of the parsed excel sheet.
     #' @param pwd Password for the mail account.
     write_mails = function(subject, personalize = c("salutation", "token"), tls = TRUE, dryrun = TRUE, chunksize = 10L, wait = 0.5, jitter = 1, sleep = 65, pwd = NULL){
+      
+      # checks to exclude known issues with mail adresses
+      cli::cli_alert_info("check mail adresses for known issues")
+      if (any(is.na(self$data[[self$mailcol]]))){
+        cli::cli_alert_danger("NA values for column {self$mailcol} in data")
+        return(invisible(NULL))
+      }
+      
+      if (any(grepl("\u00A0", self$data[[self$mailcol]]))){
+        cli::cli_alert_danger("invalid NO-BREAK SPACE in column {self$mailcol}")
+        return(invisible(NULL))
+      }
+      
+      if (!all(grepl("@", self$data[[data$mailcol]]))){
+        cli::cli_alert_danger("missing '@' in at least one mail address")
+        return(invisible(NULL))
+      }
+      
+      if (any(grepl("\u00A0", self$data[[self$mailcol]]))){
+        cli::cli_alert_danger("invalid NO-BREAK SPACE in column {self$mailcol}")
+        return(invisible(NULL))
+      }
+      
+      if (any(grepl("^\\s*$", self$data[[self$mailcol]]))){
+        cli::cli_alert_danger("whitespace without mail address")
+        return(invisible(NULL))
+      }
+      
+      regex_email <- "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{3,}$"
+      if (any(grepl(regex_email, self$data[[self$mailcol]]))){
+        cli::cli_alert_danger("found invalid mail address")
+        return(invisible(NULL))
+      }
+      cli::cli_alert_success("no known issues found in mail adresses")
+      
+      cli::cli_alert_info("check salutation for known issues")
+      if (any(is.na(self$data[[data$salutation]]))){
+        cli::cli_alert_danger("NA values in column for salutation")
+        return(invisible(NULL))
+      }
+      
+      if (any(grepl("NA", self$data[[data$salutation]]))){
+        cli::cli_alert_danger("'NA' in column for salutation")
+        return(invisible(NULL))
+      }
+      cli::cli_alert_success("no known issues found in salutation")
       
       if (is.null(pwd))
         pwd <- rstudioapi::askForPassword("Please enter password for Email")
@@ -374,15 +458,17 @@ Mailing <- R6Class(
     #' @param pwd Password for the mail account.
     #' @param buffersize `integer` value passed into `configure_imap()` to avoid
     #'   issues when processing many messages.
-    #' @param esearch `logical` value, to avoid issues with a large number of messages.
+    #' @param esearch `logical` value, to avoid issues with a large number of
+    #'   messages.
     #' @param verbose A `logical` value, so that you would see truncation.
+    #' @param dryrun A `logical` value, if `TRUE`, the evaluation results will
+    #'   not be written to the Excel sheet.
     #' @importFrom lubridate dmy
-    check_and_move = function(sender, from = "INBOX", to = "Sent", buffersize = 4194304, esearch = TRUE, verbose = TRUE, move = FALSE, pwd = NULL){
+    check_and_move = function(sender, from = "INBOX", to = "Sent", buffersize = 4194304, esearch = TRUE, verbose = TRUE, dryrun = TRUE, move = FALSE, pwd = NULL){
       
       if (is.null(pwd))
         pwd <- rstudioapi::askForPassword("Please enter password for Email")
       
-      tmp_data <- read.xlsx(self$wb, sheet = self$sheet)
       con <- configure_imap(
         username = self$imap_user,
         password = pwd,
@@ -390,6 +476,7 @@ Mailing <- R6Class(
       )
       con$select_folder(name = from)
       
+      tmp_data <- read.xlsx(self$wb, sheet = self$sheet)
       mailout_col <- sprintf("%s_mailout", self$mailing_id)
       if (mailout_col %in% colnames(tmp_data)){
         mailout_col_index <- which(colnames(tmp_data) == mailout_col)
@@ -414,35 +501,53 @@ Mailing <- R6Class(
             con$fetch_header(i)[[sprintf("header%d", i)]],
             "\\r\\n"
           )[[1]]
-          email_raw <- gsub(
-            "^To:\\s*(.*?)$", "\\1",
-            header[grep("^To:\\s", header)]
-          )
-          email <- gsub("^<(.*?)>$", "\\1", strsplit(email_raw, ",\\s*")[[1]])
           
-          date_raw <- gsub("^Date:\\s(.*?)$", "\\1", grep("^Date:\\s", header, value = TRUE))
+          # Get and parse date
+          date_raw <- gsub(
+            "^Date:\\s(.*?)$",
+            "\\1",
+            grep("^Date:\\s", header, value = TRUE)
+          )
           date_time <- lubridate::parse_date_time(
             gsub("\\s*\\([^)]*\\)$", "", date_raw),
             orders = "a, d b Y H:M:S z"
           )
           date <- as.Date(date_time)
           time <- format(date_time, "%H:%M:%S")
-
+          
+          # Get Email (second gsub may not be necessary)
+          email_raw <- gsub(
+            "^To:\\s*(.*?)$", "\\1",
+            header[grep("^To:\\s", header)]
+          )
+          email <- gsub(
+            "^<(.*?)>$",
+            "\\1",
+            strsplit(email_raw, ",\\s*")[[1]]
+          )
+          
+          # Lookup in database
           row_indices <- unique(unlist(sapply(
             email, function(m) grep(m, tmp_data[[self$mailcol]])
           )))
           if (length(row_indices) > 1L){
-            cli_alert_warning("Multiple rows with Email: {email}")
+            cli_alert_warning(
+              "Multiple rows with Email: {email} (mail id: {i})"
+            )
           }
           for (row_index in row_indices){
-            tmp_data <- read.xlsx(self$wb, sheet = self$sheet)
+            if (!dryrun) tmp_data <- read.xlsx(self$wb, sheet = self$sheet)
             new_cell_content <- paste(as.character(date), time, sep = " ")
             old_cell_content <- tmp_data[[mailout_col_index]][[row_index]]
             if (is.na(old_cell_content)) old_cell_content <- ""
             if (nchar(old_cell_content) > 0L){
-              new_cell_content <- paste(old_cell_content, new_cell_content, sep = " // ")
+              new_cell_content <- paste(
+                old_cell_content,
+                new_cell_content,
+                sep = " // "
+              )
             }
-            writeData(
+            if (!dryrun) writeData(
               wb = self$wb,
               sheet = self$sheet,
               x = new_cell_content,
@@ -500,8 +605,10 @@ Mailing <- R6Class(
             body <- strsplit(con$fetch_body(i)[[sprintf("body%d", i)]], "\\r\\n")[[1]]
             err_ix <- grep("\\s+-+ The following addresses had permanent fatal errors\\s-+", body)
             email <- gsub("^<(.*?)>$", "\\1", body[err_ix[1] + 1])
-            if (length(email) > 1) cli_alert_warning("Cannot extract mail: {email}")
-            if (!grepl("@", email[1])) cli_alert_warning("Does not look like Email: {email[1]}")
+            if (length(email) > 1)
+              cli_alert_warning("Cannot extract mail: {email}")
+            if (!grepl("@", email[1]))
+              cli_alert_warning("Does not look like Email: {email[1]}")
             email[1]
           }
         ))
