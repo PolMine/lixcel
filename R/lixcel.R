@@ -107,7 +107,7 @@ lixcel <- function(excelfile, sheet, lime, wave = "", mailcol = NULL, destfile){
     colnames(df_min) <- c("tid", "token")
     df_min <- left_join(
       x = df_min,
-      y = limetab,
+      y = lime,
       by = c("tid", "token")
     )
     
