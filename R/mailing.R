@@ -386,7 +386,6 @@ Mailing <- R6Class(
           
           mail <- self$template
           for (replace in personalize){
-            print(replace)
             mail <- gsub(sprintf("<<%s>>", replace), case[[replace]], mail)
           }
             
