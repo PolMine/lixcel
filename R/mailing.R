@@ -280,11 +280,21 @@ Mailing <- R6Class(
       
       if (!all(grepl("@", self$data[[self$mailcol]]))){
         cli::cli_alert_danger("missing '@' in at least one mail address")
+        for (i in which(!grepl("@", self$data[[self$mailcol]]))){
+          cli::cli_alert_info(
+            "mail without '@': {self$data[[self$mailcol]][i]}"
+          )
+        }
         return(invisible(NULL))
       }
       
       if (any(grepl("\u00A0", self$data[[self$mailcol]]))){
         cli::cli_alert_danger("invalid NO-BREAK SPACE in column {self$mailcol}")
+        for (i in which(grepl("\u00A0", self$data[[self$mailcol]]))){
+          cli::cli_alert_info(
+            "mail with NO-BREAK SPACE: {self$data[[self$mailcol]][i]}"
+          )
+        }
         return(invisible(NULL))
       }
       
@@ -627,6 +637,8 @@ Mailing <- R6Class(
           identified <- !is.na(row_indices)
           failed_mails <- failed_mails[identified]
           row_indices <- row_indices[identified]
+        } else {
+          identified <- logical()
         }
         
         for (i in 1L:length(row_indices)){
@@ -642,7 +654,7 @@ Mailing <- R6Class(
           }
         }
 
-        if (move) con$move_msg(
+        if (move && length(identified) > 0) con$move_msg(
           na.omit(failed_mails_index[identified]),
           to_folder = trash
         )

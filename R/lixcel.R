@@ -71,7 +71,7 @@ summary.limetab <- function(object, ...){
 #'   token, completed, usesleft).
 #' @param mailcol The column in the Excel sheet with the email address. If 
 #'   provided, the tokens are added only if an Email address is available.
-lixcel <- function(excelfile, sheet, lime, wave = "", mailcol = NULL, destfile){
+lixcel <- function(excelfile, sheet, lime, wave = "", mailcol = NULL, assigncol = NULL, destfile){
   
   cols <- paste(c("tid", "token", "completed", "usesleft" ), wave, sep = "_")
   names(cols) <- ls_cols
@@ -90,9 +90,11 @@ lixcel <- function(excelfile, sheet, lime, wave = "", mailcol = NULL, destfile){
   
   if (all(cols %in% colnames(df))){
     
+    cli::cli_alert_info("updating existing columns for wave {wave}")
+    
     if (!all(na.omit(df[[cols["tid"]]]) %in% lime[["tid"]]))
       stop(
-        "something's wrong: all IDs expected to be in workbook sheet - not true"
+        "something's wrong: all token IDs (tid) expected to be in workbook sheet - not true"
       )
     
     li_start <- which(colnames(df) == cols[1L])
@@ -124,6 +126,8 @@ lixcel <- function(excelfile, sheet, lime, wave = "", mailcol = NULL, destfile){
 
   } else {
     
+    cli::cli_alert_info("creating new columns for wave {wave}")
+    
     if (!is.null(mailcol)){
       has_mail <- !is.na(df[[mailcol]])
       cli_alert_info("assign tokens for {sum(has_mail)} with mail address")
@@ -135,8 +139,7 @@ lixcel <- function(excelfile, sheet, lime, wave = "", mailcol = NULL, destfile){
     } else {
       insert <- lime
     }
-    
-    
+
     headerStyle <- createStyle(
       fontSize = 12, fontColour = "#FFFFFF", halign = "center",
       fgFill = "#4F81BD", border = "TopBottom", borderColour = "#4F81BD"
